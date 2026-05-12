@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="theme-color" content="#050508"/>
   <title>HitList</title>
   <link rel="manifest" href="manifest.json"/>
   <link href="https://fonts.googleapis.com/css2?family=VT323&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     html,body{height:100%;background:#050508;color:#e8e8f0;font-family:'Orbitron',sans-serif;overflow-x:hidden;}
@@ -20,9 +20,9 @@
     ::-webkit-scrollbar-track{background:#050508;}
     ::-webkit-scrollbar-thumb{background:#2a2a38;border-radius:2px;}
 
-    @keyframes pulse-pink{0%,100%{filter:drop-shadow(0 0 6px #ff2d78) drop-shadow(0 0 18px #ff2d78)}50%{filter:drop-shadow(0 0 12px #ff2d78) drop-shadow(0 0 40px #ff2d78)}}
-    @keyframes pulse-green{0%,100%{filter:drop-shadow(0 0 6px #39ff14) drop-shadow(0 0 18px #39ff14)}50%{filter:drop-shadow(0 0 14px #39ff14) drop-shadow(0 0 50px #39ff14)}}
-    @keyframes pulse-yellow{0%,100%{filter:drop-shadow(0 0 6px #ffe600) drop-shadow(0 0 18px #ffe600)}50%{filter:drop-shadow(0 0 12px #ffe600) drop-shadow(0 0 40px #ffe600)}}
+    @keyframes pulse-pink{0%,100%{opacity:0.9}50%{opacity:1}}
+    @keyframes pulse-green{0%,100%{opacity:0.85}50%{opacity:1}}
+    @keyframes pulse-yellow{0%,100%{opacity:0.9}50%{opacity:1}}
     @keyframes float{0%,100%{transform:translateY(0px)}50%{transform:translateY(-8px)}}
     @keyframes float-ready{0%,100%{transform:translateY(0px) scale(1.01)}33%{transform:translateY(-11px) scale(1.03)}66%{transform:translateY(-5px) scale(1.01)}}
     @keyframes lid-open{0%{transform:rotate(0deg) translateY(0)}100%{transform:rotate(-42deg) translateY(-6px)}}
@@ -62,7 +62,7 @@ let _renderScheduled = false;
 function scheduleRender(){
   if(_renderScheduled) return;
   _renderScheduled = true;
-  requestAnimationFrame(()=>{ _renderScheduled = false; render(); });
+  setTimeout(()=>{ _renderScheduled = false; render(); }, 16);
 }
 
 let STATE = {
@@ -276,9 +276,9 @@ function canSVG(isReady, timerColor, pct, hideReady=false){
 
   const readyLabel = (!hideReady && isReady) ? `<div style="position:absolute;bottom:-26px;left:50%;transform:translateX(-50%);font-family:'Orbitron',sans-serif;font-size:11px;font-weight:900;color:${N.green};text-shadow:${glow(N.green,10)};letter-spacing:3px;white-space:nowrap;animation:pulse-green 1s ease-in-out infinite">READY ▶</div>` : '';
 
-  return `<div style="position:relative;width:160px;height:130px;animation:${floatAnim};filter:drop-shadow(0 12px 18px rgba(0,0,0,0.7))">
+  return `<div style="position:relative;width:160px;height:130px;animation:${floatAnim};-webkit-transform:translateZ(0);transform:translateZ(0);will-change:transform;">
     ${sparkles}
-    <svg width="160" height="130" viewBox="0 0 160 130" style="animation:${glowAnim};overflow:visible">
+    <svg width="160" height="130" viewBox="0 0 160 130" style="overflow:visible;-webkit-transform:translateZ(0);transform:translateZ(0);">
       <defs>
         <linearGradient id="sideGrad" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stop-color="#0a0a14"/><stop offset="12%" stop-color="#1a1a30"/>
@@ -857,26 +857,46 @@ setInterval(()=>{
   _lastTimerReady = isReady;
 }, 1000);
 
+/* ── iOS Safari: fire initial render immediately so screen isn't black ── */
+document.addEventListener('DOMContentLoaded', function(){
+  STATE.loading = true;
+  render();
+});
+
+/* ── global error handler — shows error instead of black screen ── */
+window.addEventListener('error', function(e){
+  const app = document.getElementById('app');
+  if(app && app.innerHTML.trim() === '') {
+    app.innerHTML = '<div style="padding:40px;text-align:center;font-family:monospace;color:#ff2d78;font-size:14px;">Error: ' + (e.message||'Unknown') + '<br/><br/><button onclick="location.reload()" style="background:transparent;border:1px solid #ff2d78;color:#ff2d78;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;">RETRY</button></div>';
+  }
+});
+window.addEventListener('unhandledrejection', function(e){
+  console.error('Unhandled promise rejection:', e.reason);
+});
+
 /* ── auth listener ── */
 sb.auth.onAuthStateChange(async(event, session)=>{
-  STATE.session = session;
-  if(session){
-    // Try to load existing profile
-    let {data:profile} = await sb.from('profiles').select('*').eq('id',session.user.id).single();
-    // If no profile yet (just confirmed email), create it from stored username
-    if(!profile){
-      const pendingUsername = localStorage.getItem('hl_pending_username');
-      if(pendingUsername){
-        const {data:newProfile} = await sb.from('profiles')
-          .insert({id:session.user.id, username:pendingUsername})
-          .select().single();
-        profile = newProfile;
-        localStorage.removeItem('hl_pending_username');
+  try {
+    STATE.session = session;
+    if(session){
+      let {data:profile} = await sb.from('profiles').select('*').eq('id',session.user.id).single();
+      if(!profile){
+        const pendingUsername = localStorage.getItem('hl_pending_username');
+        if(pendingUsername){
+          const {data:newProfile} = await sb.from('profiles')
+            .insert({id:session.user.id, username:pendingUsername})
+            .select().single();
+          profile = newProfile;
+          localStorage.removeItem('hl_pending_username');
+        }
       }
+      STATE.profile = profile;
+      await loadUserData();
+    } else {
+      setState({loading:false});
     }
-    STATE.profile = profile;
-    await loadUserData();
-  } else {
+  } catch(err) {
+    console.error('Auth error:', err);
     setState({loading:false});
   }
 });
