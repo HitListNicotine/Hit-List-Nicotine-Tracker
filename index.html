@@ -143,13 +143,13 @@ async function loadTrashTalks(){
 async function signUp(){
   setState({authLoading:true, authError:''});
   if(!STATE.authUsername.trim()){setState({authError:'Please enter a username',authLoading:false});return;}
-  const {data,error} = await sb.auth.signUp({email:STATE.authEmail,password:STATE.authPassword});
+  if(STATE.authPassword.length < 6){setState({authError:'Password must be at least 6 characters',authLoading:false});return;}
+  const {data:existing} = await sb.from('profiles').select('id').eq('username', STATE.authUsername.trim().toUpperCase()).maybeSingle();
+  if(existing){setState({authError:'Username already taken — try another',authLoading:false});return;}
+  localStorage.setItem('hl_pending_username', STATE.authUsername.trim().toUpperCase());
+  const {data,error} = await sb.auth.signUp({email:STATE.authEmail, password:STATE.authPassword});
   if(error){setState({authError:error.message,authLoading:false});return;}
-  if(data.user){
-    const {error:pe} = await sb.from('profiles').insert({id:data.user.id,username:STATE.authUsername.trim().toUpperCase()});
-    if(pe){setState({authError:'Username taken or invalid',authLoading:false});return;}
-  }
-  setState({authLoading:false, authError:'Check your email to confirm your account!'});
+  setState({authLoading:false, authError:'✓ Check your email and click the confirmation link!'});
 }
 
 async function signIn(){
@@ -430,10 +430,10 @@ function renderToday(){
         <svg width="210" height="210" style="transform:rotate(-90deg);position:absolute;top:0;left:0;">
           <circle cx="105" cy="105" r="${r}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="10"/>
           <circle cx="105" cy="105" r="${r}" fill="none" stroke="${timerColor}" stroke-width="10" stroke-linecap="round"
-            stroke-dasharray="${circ}" stroke-dashoffset="${dash}"
+            id="timer-ring" stroke-dasharray="${circ}" stroke-dashoffset="${dash}"
             style="transition:stroke-dashoffset 1s linear,stroke 0.4s;filter:drop-shadow(0 0 4px ${timerColor}44)"/>
         </svg>
-        ${!timerReady ? `<div style="position:absolute;top:14px;left:0;right:0;text-align:center;z-index:2;font-family:'VT323',monospace;font-size:24px;color:${timerColor};text-shadow:${glow(timerColor,8)}">${timerMins}:${String(timerSecs).padStart(2,'0')}</div>` : ''}
+        ${!timerReady ? `<div id="timer-countdown" data-was-ready="false" style="position:absolute;top:14px;left:0;right:0;text-align:center;z-index:2;font-family:'VT323',monospace;font-size:24px;color:${timerColor};text-shadow:${glow(timerColor,8)}">${timerMins}:${String(timerSecs).padStart(2,'0')}</div>` : ''}
         <div style="position:relative;z-index:3;margin-top:16px;">${canSVG(timerReady, timerColor, timerPct)}</div>
       </div>
       ${vt(`INTERVAL: ${s.interval_minutes||60} MIN`,'#444',13,'letter-spacing:2px;')}
@@ -813,14 +813,57 @@ function render(){
   `;
 }
 
-/* ── timer tick — only fires when logged in ── */
-setInterval(()=>{ if(STATE.session){ STATE.now = Date.now(); render(); } }, 1000);
+/* ── timer tick — targeted update, no full re-render ── */
+setInterval(()=>{
+  if(!STATE.session) return;
+  STATE.now = Date.now();
+  // Only update timer text elements directly to avoid re-rendering can animation
+  const s = STATE.settings;
+  const intervalMs = (s.interval_minutes||60)*60*1000;
+  const elapsedMs = STATE.timerStart ? STATE.now - STATE.timerStart : intervalMs;
+  const remainingMs = Math.max(intervalMs - elapsedMs, 0);
+  const timerPct = STATE.timerStart ? Math.min(elapsedMs/intervalMs,1) : 1;
+  const wasReady = timerPct >= 1;
+  const timerMins = Math.floor(remainingMs/60000);
+  const timerSecs = Math.floor((remainingMs%60000)/1000);
+  const timerColor = wasReady ? N.green : timerPct>0.6 ? N.yellow : N.pink;
+
+  // Update countdown text
+  const countdownEl = document.getElementById('timer-countdown');
+  if(countdownEl && !wasReady){
+    countdownEl.textContent = timerMins+':'+String(timerSecs).padStart(2,'0');
+    countdownEl.style.color = timerColor;
+  }
+  // Update ring dashoffset
+  const ringEl = document.getElementById('timer-ring');
+  if(ringEl){
+    const r = (210-10)/2, circ = 2*Math.PI*r;
+    ringEl.setAttribute('stroke-dashoffset', circ*(1-Math.max(timerPct,0)));
+    ringEl.setAttribute('stroke', timerColor);
+  }
+  // Full re-render only when timer flips to ready state
+  const prevReady = document.getElementById('timer-countdown')?.dataset.wasReady === 'true';
+  if(wasReady !== prevReady) render();
+  if(countdownEl) countdownEl.dataset.wasReady = wasReady;
+}, 1000);
 
 /* ── auth listener ── */
 sb.auth.onAuthStateChange(async(event, session)=>{
   STATE.session = session;
   if(session){
-    const {data:profile} = await sb.from('profiles').select('*').eq('id',session.user.id).single();
+    // Try to load existing profile
+    let {data:profile} = await sb.from('profiles').select('*').eq('id',session.user.id).single();
+    // If no profile yet (just confirmed email), create it from stored username
+    if(!profile){
+      const pendingUsername = localStorage.getItem('hl_pending_username');
+      if(pendingUsername){
+        const {data:newProfile} = await sb.from('profiles')
+          .insert({id:session.user.id, username:pendingUsername})
+          .select().single();
+        profile = newProfile;
+        localStorage.removeItem('hl_pending_username');
+      }
+    }
     STATE.profile = profile;
     await loadUserData();
   } else {
