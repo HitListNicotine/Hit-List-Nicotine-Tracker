@@ -58,6 +58,13 @@ const TYPES = ['🚬 Cigarette','💨 Vape','🟤 Pouch','🌿 Dip','⚡ Other']
 const MEDAL = ['🥇','🥈','🥉'];
 
 /* ── state ── */
+let _renderScheduled = false;
+function scheduleRender(){
+  if(_renderScheduled) return;
+  _renderScheduled = true;
+  requestAnimationFrame(()=>{ _renderScheduled = false; render(); });
+}
+
 let STATE = {
   session: null, profile: null, tab: 'today',
   logs: [], brands: [], settings: {daily_goal:10,daily_spend_limit:5,interval_minutes:60},
@@ -70,7 +77,7 @@ let STATE = {
   authError:'', authLoading:false, loading:true, pulse:false,
 };
 
-function setState(patch){ Object.assign(STATE, patch); render(); }
+function setState(patch){ Object.assign(STATE, patch); scheduleRender(); }
 
 /* ── helpers ── */
 const todayKey = () => new Date().toISOString().split('T')[0];
@@ -813,38 +820,41 @@ function render(){
   `;
 }
 
-/* ── timer tick — targeted update, no full re-render ── */
+/* ── timer tick — direct DOM updates only, no re-render ── */
+let _lastTimerReady = null;
 setInterval(()=>{
   if(!STATE.session) return;
   STATE.now = Date.now();
-  // Only update timer text elements directly to avoid re-rendering can animation
+
   const s = STATE.settings;
   const intervalMs = (s.interval_minutes||60)*60*1000;
   const elapsedMs = STATE.timerStart ? STATE.now - STATE.timerStart : intervalMs;
   const remainingMs = Math.max(intervalMs - elapsedMs, 0);
   const timerPct = STATE.timerStart ? Math.min(elapsedMs/intervalMs,1) : 1;
-  const wasReady = timerPct >= 1;
+  const isReady = timerPct >= 1;
   const timerMins = Math.floor(remainingMs/60000);
   const timerSecs = Math.floor((remainingMs%60000)/1000);
-  const timerColor = wasReady ? N.green : timerPct>0.6 ? N.yellow : N.pink;
+  const timerColor = isReady ? N.green : timerPct>0.6 ? N.yellow : N.pink;
 
-  // Update countdown text
+  // Direct DOM update — countdown text
   const countdownEl = document.getElementById('timer-countdown');
-  if(countdownEl && !wasReady){
+  if(countdownEl){
     countdownEl.textContent = timerMins+':'+String(timerSecs).padStart(2,'0');
     countdownEl.style.color = timerColor;
+    countdownEl.style.textShadow = glow(timerColor,8);
   }
-  // Update ring dashoffset
+  // Direct DOM update — ring
   const ringEl = document.getElementById('timer-ring');
   if(ringEl){
     const r = (210-10)/2, circ = 2*Math.PI*r;
     ringEl.setAttribute('stroke-dashoffset', circ*(1-Math.max(timerPct,0)));
     ringEl.setAttribute('stroke', timerColor);
   }
-  // Full re-render only when timer flips to ready state
-  const prevReady = document.getElementById('timer-countdown')?.dataset.wasReady === 'true';
-  if(wasReady !== prevReady) render();
-  if(countdownEl) countdownEl.dataset.wasReady = wasReady;
+  // Only do a full re-render when ready state flips (lid opens/closes)
+  if(_lastTimerReady !== null && isReady !== _lastTimerReady){
+    scheduleRender();
+  }
+  _lastTimerReady = isReady;
 }, 1000);
 
 /* ── auth listener ── */
