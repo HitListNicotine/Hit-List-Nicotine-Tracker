@@ -160,7 +160,8 @@ async function signIn(){
 
 async function signOut(){
   await sb.auth.signOut();
-  setState({session:null,profile:null,logs:[],brands:[],settings:{daily_goal:10,daily_spend_limit:5,interval_minutes:60},showSettings:false});
+  _authRendered = false;
+  setState({session:null,profile:null,logs:[],brands:[],settings:{daily_goal:10,daily_spend_limit:5,interval_minutes:60},showSettings:false,authMode:'signin',authEmail:'',authPassword:'',authUsername:'',authError:''});
 }
 
 async function logUse(){
@@ -750,7 +751,10 @@ function render(){
 
   if(!STATE.session){
     app.style.padding = '0';
-    if(!_authRendered){
+    // Re-render fully when switching modes (signin<->signup) to show/hide username field
+    const modeChanged = _authRendered && app.dataset.authMode !== STATE.authMode;
+    if(!_authRendered || modeChanged){
+      app.dataset.authMode = STATE.authMode;
       app.innerHTML = renderAuth();
       _authRendered = true;
       document.getElementById('auth-email')?.addEventListener('input', e=>{ STATE.authEmail=e.target.value; });
