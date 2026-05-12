@@ -859,8 +859,13 @@ setInterval(()=>{
 
 /* ── iOS Safari: fire initial render immediately so screen isn't black ── */
 document.addEventListener('DOMContentLoaded', function(){
-  STATE.loading = true;
   render();
+  // Fallback: if onAuthStateChange never fires within 5s, stop loading
+  setTimeout(()=>{
+    if(STATE.loading){
+      setState({loading:false});
+    }
+  }, 5000);
 });
 
 /* ── global error handler — shows error instead of black screen ── */
@@ -874,8 +879,18 @@ window.addEventListener('unhandledrejection', function(e){
   console.error('Unhandled promise rejection:', e.reason);
 });
 
-/* ── auth listener ── */
-sb.auth.onAuthStateChange(async(event, session)=>{
+/* ── auth init — use getSession() first, more reliable on iOS Safari ── */
+async function initAuth(){
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    await handleSession(session);
+  } catch(err){
+    console.error('initAuth error:', err);
+    setState({loading:false});
+  }
+}
+
+async function handleSession(session){
   try {
     STATE.session = session;
     if(session){
@@ -895,11 +910,21 @@ sb.auth.onAuthStateChange(async(event, session)=>{
     } else {
       setState({loading:false});
     }
-  } catch(err) {
-    console.error('Auth error:', err);
+  } catch(err){
+    console.error('handleSession error:', err);
     setState({loading:false});
   }
+}
+
+/* ── auth listener — handles sign in/out/token refresh ── */
+sb.auth.onAuthStateChange(async(event, session)=>{
+  // Skip INITIAL_SESSION — handled by initAuth() already
+  if(event === 'INITIAL_SESSION') return;
+  await handleSession(session);
 });
+
+// Kick off auth check immediately
+initAuth();
 </script>
 </body>
 </html>
