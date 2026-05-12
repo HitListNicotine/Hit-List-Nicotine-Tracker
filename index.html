@@ -392,11 +392,13 @@ function renderAuth(){
         ${vt('PASSWORD','#666',13,'margin-bottom:6px;')}
         ${neonInput('auth-password', STATE.authPassword, '••••••••', 'password', N.cyan)}
       </div>
-      ${STATE.authError ? `<div style="font-family:'VT323',monospace;font-size:15px;color:${STATE.authError.includes('Check')?N.green:N.pink};margin-bottom:12px;text-align:center;">${STATE.authError}</div>` : ''}
-      ${STATE.authLoading
-        ? `<div style="display:flex;justify-content:center;padding:12px;"><div class="spinner"></div></div>`
-        : neonBtn(N.pink, isSignUp?'CREATE ACCOUNT →':'ENTER THE GRID →', isSignUp?'signUp()':'signIn()', 'width:100%;')
-      }
+      ${STATE.authError ? `<div id="auth-error"><div style="font-family:'VT323',monospace;font-size:15px;color:${STATE.authError.includes('Check')?N.green:N.pink};margin-bottom:12px;text-align:center;">${STATE.authError}</div></div>` : '<div id="auth-error"></div>'}
+      <div id="auth-submit">
+        ${STATE.authLoading
+          ? `<div style="display:flex;justify-content:center;padding:12px;"><div class="spinner"></div></div>`
+          : neonBtn(N.pink, isSignUp?'CREATE ACCOUNT →':'ENTER THE GRID →', isSignUp?'signUp()':'signIn()', 'width:100%;')
+        }
+      </div>
     `, 'width:100%;max-width:340px;', true)}
   </div>`;
 }
@@ -734,24 +736,43 @@ function updateLogFormBrand(val){
 }
 
 /* ── main render ── */
+let _authRendered = false;
+
 function render(){
   const app = document.getElementById('app');
   if(!app) return;
 
   if(STATE.loading){
     app.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;"><div class="spinner"></div></div>`;
+    _authRendered = false;
     return;
   }
 
   if(!STATE.session){
     app.style.padding = '0';
-    app.innerHTML = renderAuth();
-    // bind auth inputs
-    document.getElementById('auth-email')?.addEventListener('input', e=>{ STATE.authEmail=e.target.value; });
-    document.getElementById('auth-password')?.addEventListener('input', e=>{ STATE.authPassword=e.target.value; });
-    document.getElementById('auth-username')?.addEventListener('input', e=>{ STATE.authUsername=e.target.value; });
+    if(!_authRendered){
+      app.innerHTML = renderAuth();
+      _authRendered = true;
+      document.getElementById('auth-email')?.addEventListener('input', e=>{ STATE.authEmail=e.target.value; });
+      document.getElementById('auth-password')?.addEventListener('input', e=>{ STATE.authPassword=e.target.value; });
+      document.getElementById('auth-username')?.addEventListener('input', e=>{ STATE.authUsername=e.target.value; });
+    } else {
+      const errEl = document.getElementById('auth-error');
+      const btnEl = document.getElementById('auth-submit');
+      if(errEl) errEl.innerHTML = STATE.authError
+        ? `<div style="font-family:'VT323',monospace;font-size:15px;color:${STATE.authError.includes('Check')?N.green:N.pink};margin-bottom:12px;text-align:center;">${STATE.authError}</div>` : '';
+      if(btnEl){
+        if(STATE.authLoading){
+          btnEl.innerHTML = `<div style="display:flex;justify-content:center;padding:12px;"><div class="spinner"></div></div>`;
+        } else {
+          btnEl.innerHTML = `<button onclick="${STATE.authMode==='signup'?'signUp()':'signIn()'}" style="width:100%;background:${N.pink}22;border:2px solid ${N.pink};border-radius:8px;color:${N.pink};font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;padding:11px 20px;cursor:pointer;text-shadow:${glow(N.pink,8)};box-shadow:0 0 8px ${N.pink}44;letter-spacing:1px;">${STATE.authMode==='signup'?'CREATE ACCOUNT →':'ENTER THE GRID →'}</button>`;
+        }
+      }
+    }
     return;
   }
+
+  _authRendered = false;
 
   app.style.padding = '16px 16px 90px';
 
@@ -788,8 +809,8 @@ function render(){
   `;
 }
 
-/* ── timer tick ── */
-setInterval(()=>{ STATE.now = Date.now(); render(); }, 1000);
+/* ── timer tick — only fires when logged in ── */
+setInterval(()=>{ if(STATE.session){ STATE.now = Date.now(); render(); } }, 1000);
 
 /* ── auth listener ── */
 sb.auth.onAuthStateChange(async(event, session)=>{
