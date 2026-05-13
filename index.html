@@ -384,8 +384,8 @@ function renderAuth(){
 
     ${card(N.cyan, `
       <div style="display:flex;margin-bottom:16px;gap:4px;background:rgba(0,0,0,0.4);border-radius:8px;padding:4px;">
-        <button onclick="setState({authMode:'signin',authError:''})" style="flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;background:${!isSignUp?N.cyan+'22':'transparent'};color:${!isSignUp?N.cyan:'#444'};font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-shadow:${!isSignUp?glow(N.cyan,6):'none'};">SIGN IN</button>
-        <button onclick="setState({authMode:'signup',authError:''})" style="flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;background:${isSignUp?N.cyan+'22':'transparent'};color:${isSignUp?N.cyan:'#444'};font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-shadow:${isSignUp?glow(N.cyan,6):'none'};">SIGN UP</button>
+        <button data-auth-mode="signin" style="flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;background:${!isSignUp?N.cyan+'22':'transparent'};color:${!isSignUp?N.cyan:'#444'};font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-shadow:${!isSignUp?glow(N.cyan,6):'none'};">SIGN IN</button>
+        <button data-auth-mode="signup" style="flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;background:${isSignUp?N.cyan+'22':'transparent'};color:${isSignUp?N.cyan:'#444'};font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-shadow:${isSignUp?glow(N.cyan,6):'none'};">SIGN UP</button>
       </div>
       ${isSignUp ? `
         <div style="margin-bottom:10px;">
@@ -404,7 +404,7 @@ function renderAuth(){
       <div id="auth-submit">
         ${STATE.authLoading
           ? `<div style="display:flex;justify-content:center;padding:12px;"><div class="spinner"></div></div>`
-          : neonBtn(N.pink, isSignUp?'CREATE ACCOUNT →':'ENTER THE GRID →', isSignUp?'signUp()':'signIn()', 'width:100%;')
+          : `<button id="btn-auth-submit" style="width:100%;background:${N.pink}22;border:2px solid ${N.pink};border-radius:8px;color:${N.pink};font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;padding:11px 20px;cursor:pointer;text-shadow:${glow(N.pink,8)};box-shadow:0 0 8px ${N.pink}44;letter-spacing:1px;">${isSignUp?'CREATE ACCOUNT →':'ENTER THE GRID →'}</button>`
         }
       </div>
     `, 'width:100%;max-width:340px;', true)}
@@ -467,8 +467,8 @@ function renderToday(){
         <div style="font-family:'Orbitron',sans-serif;font-size:20px;font-weight:700;color:${N.purple};text-shadow:${glow(N.purple,10)}">${totalMg} mg</div>
       </div>`) : ''}
 
-    <button onclick="setState({showLogForm:true})" style="width:100%;padding:18px;border:2px solid ${N.pink};border-radius:12px;background:${STATE.pulse?N.pink+'33':N.pink+'11'};color:${N.pink};font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:2px;text-shadow:${glow(N.pink,10)};box-shadow:0 0 20px ${N.pink}44,inset 0 0 20px ${N.pink}11;transform:${STATE.pulse?'scale(0.97)':'scale(1)'};transition:all 0.15s;margin-bottom:10px;">+ LOG A USE</button>
-    ${todayLogs.length>0 ? `<button onclick="undoLast()" style="width:100%;padding:10px;border:1px solid #333;border-radius:8px;background:transparent;color:#666;font-family:'Orbitron',sans-serif;font-size:13px;cursor:pointer;">↩ UNDO LAST</button>` : ''}
+    <button id="btn-open-log" style="width:100%;padding:18px;border:2px solid ${N.pink};border-radius:12px;background:${STATE.pulse?N.pink+'33':N.pink+'11'};color:${N.pink};font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:2px;text-shadow:${glow(N.pink,10)};box-shadow:0 0 20px ${N.pink}44,inset 0 0 20px ${N.pink}11;transform:${STATE.pulse?'scale(0.97)':'scale(1)'};transition:all 0.15s;margin-bottom:10px;">+ LOG A USE</button>
+    ${todayLogs.length>0 ? `<button id="btn-undo" style="width:100%;padding:10px;border:1px solid #333;border-radius:8px;background:transparent;color:#666;font-family:'Orbitron',sans-serif;font-size:13px;cursor:pointer;">↩ UNDO LAST</button>` : ''}
   </div>`;
 }
 
@@ -556,7 +556,7 @@ function renderGear(){
           <div style="font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:${N.yellow};text-shadow:${glow(N.yellow,6)}">${escHtml(b.name)}</div>
           <div style="font-family:'VT323',monospace;font-size:14px;color:#666;margin-top:3px">${b.type} · ${b.mg}mg · ${fmtMoney(b.price_per_unit)}/unit</div>
         </div>
-        <button onclick="deleteBrand('${b.id}')" style="background:transparent;border:none;color:${N.pink};font-size:20px;cursor:pointer;text-shadow:${glow(N.pink,6)}">×</button>
+        <button data-delete-brand="${b.id}" style="background:transparent;border:none;color:${N.pink};font-size:20px;cursor:pointer;text-shadow:${glow(N.pink,6)}">×</button>
       </div>`)).join('')}
     ${card(N.green,`
       ${vt('ADD GEAR',N.green,13,`text-shadow:${glow(N.green,6)};margin-bottom:12px;`)}
@@ -569,7 +569,7 @@ function renderGear(){
         <select id="nb-type" style="width:100%;background:rgba(0,0,0,0.7);border:1px solid ${N.green}88;border-radius:8px;color:#e8e8f0;font-size:16px;padding:10px 12px;font-family:'VT323',monospace;outline:none;">
           ${TYPES.map(t=>`<option value="${t}" ${nb.type===t?'selected':''}>${t}</option>`).join('')}
         </select>
-        ${neonBtn(N.green,'SAVE GEAR','saveBrand()','width:100%;')}
+        ${`<button id="btn-save-brand" style="width:100%;background:${N.green}22;border:2px solid ${N.green};border-radius:8px;color:${N.green};font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;padding:11px 20px;cursor:pointer;text-shadow:${glow(N.green,8)};letter-spacing:1px;">SAVE GEAR</button>`}
       </div>
     `)}
   </div>`;
@@ -580,7 +580,7 @@ function renderCrew(){
   return `<div style="animation:slide-up 0.4s ease;width:100%;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
       ${vt('THE CREW',N.pink,13,`text-shadow:${glow(N.pink,6)};`)}
-      <button onclick="loadLeaderboard();loadTrashTalks();" style="background:${N.cyan}22;border:2px solid ${N.cyan};border-radius:8px;color:${N.cyan};font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;padding:5px 10px;cursor:pointer;text-shadow:${glow(N.cyan,6)};">↻ REFRESH</button>
+      <button id="btn-crew-refresh" style="background:${N.cyan}22;border:2px solid ${N.cyan};border-radius:8px;color:${N.cyan};font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;padding:5px 10px;cursor:pointer;text-shadow:${glow(N.cyan,6)};">↻ REFRESH</button>
     </div>
     ${card(N.purple,`
       ${vt('HOW TO ADD FRIENDS',N.purple,14,`text-shadow:${glow(N.purple,6)};margin-bottom:8px;`)}
@@ -613,7 +613,7 @@ function renderCrew(){
                     <div style="font-family:'VT323',monospace;font-size:15px;color:#e8e8f0;line-height:1.5">${escHtml(talk.text)}</div>
                   </div>` : ''}
                 ${vt(`🔥 SEND TRASH TALK TO ${escHtml(p.username)}`,N.orange,11,'margin-bottom:8px;')}
-                <input class="neon-input" id="trash-${p.id}" value="${escHtml(trashInput)}" placeholder="Give context... or just hit FIRE" style="border:1px solid ${N.orange}88;margin-bottom:10px;" oninput="STATE.trashInputs['${p.username}']=this.value"/>
+                <input class="neon-input" data-trash-input="${p.username}" value="${escHtml(trashInput)}" placeholder="Give context... or just hit FIRE" style="border:1px solid ${N.orange}88;margin-bottom:10px;"/>
                 ${talk&&talk.from===STATE.profile?.username?`
                   <div style="background:rgba(255,107,26,0.08);border:1px solid ${N.orange}44;border-radius:8px;padding:10px 12px;margin-bottom:10px;">
                     ${vt('⚡ YOUR ROAST PREVIEW',N.orange,11,'margin-bottom:6px;')}
@@ -622,8 +622,8 @@ function renderCrew(){
                       : `<div style="font-family:'VT323',monospace;font-size:15px;color:#e8e8f0;line-height:1.5">${escHtml(talk.text)}</div>`}
                   </div>` : ''}
                 <div style="display:flex;gap:8px;">
-                  ${neonBtn(N.orange, talk?.loading?'GENERATING...':'🔥 FIRE THE ROAST', `generateTrashTalk('${p.id}','${p.username}')`, 'flex:1;font-size:12px;padding:9px 16px;')}
-                  ${talk&&!talk.loading ? neonBtn(N.pink,'↻',`generateTrashTalk('${p.id}','${p.username}')`, 'font-size:11px;padding:9px 14px;') : ''}
+                  ${`<button data-trash-target-id="${p.id}" data-trash-target-name="${p.username}" style="flex:1;font-size:12px;padding:9px 16px;background:${N.orange}22;border:2px solid ${N.orange};border-radius:8px;color:${N.orange};font-family:'Orbitron',sans-serif;font-weight:700;cursor:pointer;text-shadow:${glow(N.orange,8)}">${talk?.loading?'GENERATING...':'🔥 FIRE THE ROAST'}</button>`}
+                  ${talk&&!talk.loading ? `<button data-trash-target-id="${p.id}" data-trash-target-name="${p.username}" style="font-size:11px;padding:9px 14px;background:${N.pink}22;border:2px solid ${N.pink};border-radius:8px;color:${N.pink};font-family:'Orbitron',sans-serif;font-weight:700;cursor:pointer;">↻</button>` : ''}
                 </div>
               ` : `
                 ${talk&&talk.from!==STATE.profile?.username?`
@@ -636,7 +636,7 @@ function renderCrew(){
             </div>` : '';
 
           return card(isMe?N.pink:rankColor, `
-            <div style="display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="setState({expandedUser:STATE.expandedUser==='${p.username}'?null:'${p.username}'})">
+            <div style="display:flex;align-items:center;gap:12px;cursor:pointer;" data-expand-user="${p.username}">
               <div style="font-family:'Orbitron',sans-serif;font-size:20px;color:${rankColor};text-shadow:${glow(rankColor,10)};min-width:32px;text-align:center;${i===0?'animation:trophy-bounce 2s ease-in-out infinite;':''}">${i<3?MEDAL[i]:`#${i+1}`}</div>
               <div style="flex:1;">
                 <div style="display:flex;align-items:center;gap:8px;">
@@ -662,7 +662,7 @@ function renderCrew(){
 function renderLogForm(){
   const f = STATE.logForm;
   const brand = STATE.brands.find(b=>b.id===f.brandId);
-  return `<div class="modal-overlay" onclick="if(event.target===this)setState({showLogForm:false})">
+  return `<div class="modal-overlay" id="modal-log-overlay">
     <div class="modal-sheet" style="border:1px solid ${N.pink}66;box-shadow:0 -10px 40px ${N.pink}22;">
       ${vt('LOG A USE',N.pink,13,`text-shadow:${glow(N.pink,6)};margin-bottom:16px;`)}
       <div style="margin-bottom:10px;">
@@ -676,7 +676,7 @@ function renderLogForm(){
         <div style="margin-bottom:10px;">
           ${vt('TYPE','#666',13,'margin-bottom:6px;')}
           <div style="display:flex;flex-wrap:wrap;gap:6px;">
-            ${TYPES.map(t=>`<button onclick="setState({logForm:{...STATE.logForm,type:'${t}'}})" style="background:${f.type===t?N.pink+'22':'transparent'};border:1px solid ${f.type===t?N.pink:'#222'};border-radius:20px;padding:5px 12px;cursor:pointer;color:${f.type===t?N.pink:'#555'};font-family:'VT323',monospace;font-size:14px;">${t}</button>`).join('')}
+            ${TYPES.map(t=>`<button data-log-type="${t}" style="background:${f.type===t?N.pink+'22':'transparent'};border:1px solid ${f.type===t?N.pink:'#222'};border-radius:20px;padding:5px 12px;cursor:pointer;color:${f.type===t?N.pink:'#555'};font-family:'VT323',monospace;font-size:14px;">${t}</button>`).join('')}
           </div>
         </div>` : ''}
       <div style="display:flex;gap:8px;margin-bottom:10px;">
@@ -685,8 +685,8 @@ function renderLogForm(){
       </div>
       ${neonInput('lf-note',f.note,'Note (optional)','text',N.purple,'margin-bottom:16px;')}
       <div style="display:flex;gap:10px;">
-        <button onclick="setState({showLogForm:false})" style="flex:1;padding:13px;border:1px solid #333;border-radius:8px;background:transparent;color:#666;font-family:'Orbitron',sans-serif;font-size:13px;cursor:pointer;">CANCEL</button>
-        <button onclick="collectAndLog()" style="flex:2;padding:13px;border:2px solid ${N.pink};border-radius:8px;background:${N.pink}22;color:${N.pink};font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;cursor:pointer;text-shadow:${glow(N.pink,8)};box-shadow:0 0 15px ${N.pink}44;">LOG IT ▶</button>
+        <button id="btn-close-log" style="flex:1;padding:13px;border:1px solid #333;border-radius:8px;background:transparent;color:#666;font-family:'Orbitron',sans-serif;font-size:13px;cursor:pointer;">CANCEL</button>
+        <button id="btn-log-submit" style="flex:2;padding:13px;border:2px solid ${N.pink};border-radius:8px;background:${N.pink}22;color:${N.pink};font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;cursor:pointer;text-shadow:${glow(N.pink,8)};box-shadow:0 0 15px ${N.pink}44;">LOG IT ▶</button>
       </div>
     </div>
   </div>`;
@@ -694,7 +694,7 @@ function renderLogForm(){
 
 function renderSettingsForm(){
   const e = STATE.editSettings||STATE.settings;
-  return `<div class="modal-overlay" onclick="if(event.target===this)setState({showSettings:false})">
+  return `<div class="modal-overlay" id="modal-settings-overlay">
     <div class="modal-sheet" style="border:1px solid ${N.purple}66;box-shadow:0 -10px 40px ${N.purple}22;">
       ${vt('SETTINGS',N.purple,13,`text-shadow:${glow(N.purple,6)};margin-bottom:16px;`)}
       ${[['DAILY USE GOAL','daily_goal','e.g. 10'],['DAILY SPEND LIMIT ($)','daily_spend_limit','e.g. 5.00'],['INTERVAL BETWEEN USES (MIN)','interval_minutes','e.g. 60']]
@@ -704,11 +704,11 @@ function renderSettingsForm(){
             <input class="neon-input" id="es-${key}" type="number" value="${e[key]||''}" placeholder="${ph}" style="border:1px solid ${N.purple}88;box-shadow:0 0 6px ${N.purple}44;caret-color:${N.purple};"/>
           </div>`).join('')}
       <div style="display:flex;gap:10px;margin-top:8px;margin-bottom:12px;">
-        <button onclick="setState({showSettings:false})" style="flex:1;padding:13px;border:1px solid #333;border-radius:8px;background:transparent;color:#666;font-family:'Orbitron',sans-serif;font-size:13px;cursor:pointer;">CANCEL</button>
-        ${neonBtn(N.purple,'SAVE','collectAndSaveSettings()','flex:2;')}
+        <button id="btn-close-settings" style="flex:1;padding:13px;border:1px solid #333;border-radius:8px;background:transparent;color:#666;font-family:'Orbitron',sans-serif;font-size:13px;cursor:pointer;">CANCEL</button>
+        ${`<button id="btn-save-settings" style="flex:2;background:${N.purple}22;border:2px solid ${N.purple};border-radius:8px;color:${N.purple};font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;padding:11px 20px;cursor:pointer;text-shadow:${glow(N.purple,8)};letter-spacing:1px;">SAVE</button>`}
       </div>
       <div style="border-top:1px solid #1a1a2e;padding-top:14px;">
-        ${neonBtn(N.pink,'⏻ SIGN OUT','signOut()','width:100%;')}
+        ${`<button id="btn-sign-out" style="width:100%;background:${N.pink}22;border:2px solid ${N.pink};border-radius:8px;color:${N.pink};font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;padding:11px 20px;cursor:pointer;text-shadow:${glow(N.pink,8)};letter-spacing:1px;">⏻ SIGN OUT</button>`}
       </div>
     </div>
   </div>`;
@@ -776,7 +776,11 @@ function render(){
         if(STATE.authLoading){
           btnEl.innerHTML = `<div style="display:flex;justify-content:center;padding:12px;"><div class="spinner"></div></div>`;
         } else {
-          btnEl.innerHTML = `<button onclick="${STATE.authMode==='signup'?'signUp()':'signIn()'}" style="width:100%;background:${N.pink}22;border:2px solid ${N.pink};border-radius:8px;color:${N.pink};font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;padding:11px 20px;cursor:pointer;text-shadow:${glow(N.pink,8)};box-shadow:0 0 8px ${N.pink}44;letter-spacing:1px;">${STATE.authMode==='signup'?'CREATE ACCOUNT →':'ENTER THE GRID →'}</button>`;
+          btnEl.innerHTML = `<button id="btn-auth-submit" style="width:100%;background:${N.pink}22;border:2px solid ${N.pink};border-radius:8px;color:${N.pink};font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;padding:11px 20px;cursor:pointer;text-shadow:${glow(N.pink,8)};box-shadow:0 0 8px ${N.pink}44;letter-spacing:1px;">${STATE.authMode==='signup'?'CREATE ACCOUNT →':'ENTER THE GRID →'}</button>`;
+          setTimeout(()=>{
+            const b = document.getElementById('btn-auth-submit');
+            if(b) b.onclick = STATE.authMode==='signup' ? signUp : signIn;
+          }, 0);
         }
       }
     }
@@ -804,11 +808,11 @@ function render(){
         </div>
         <div style="font-family:'VT323',monospace;font-size:14px;color:${N.yellow};text-shadow:${glow(N.yellow,6)};letter-spacing:3px;margin-top:2px;">${escHtml(STATE.profile?.username||'')} ▮</div>
       </div>
-      <button onclick="setState({showSettings:true,editSettings:{...STATE.settings}})" style="background:transparent;border:1px solid ${N.purple}66;border-radius:8px;color:${N.purple};padding:8px 10px;cursor:pointer;font-size:16px;text-shadow:${glow(N.purple,6)};box-shadow:0 0 8px ${N.purple}44;">⚙</button>
+      <button id="btn-open-settings" style="background:transparent;border:1px solid ${N.purple}66;border-radius:8px;color:${N.purple};padding:8px 10px;cursor:pointer;font-size:16px;text-shadow:${glow(N.purple,6)};box-shadow:0 0 8px ${N.purple}44;">⚙</button>
     </div>
 
     <div style="display:flex;gap:4px;background:rgba(0,0,0,0.6);border:1px solid ${N.cyan}33;border-radius:10px;padding:4px;margin-bottom:20px;width:100%;max-width:420px;">
-      ${TABS.map(t=>`<button class="tab-btn ${STATE.tab===t.id?'active':''}" onclick="setState({tab:'${t.id}'})">${t.label}</button>`).join('')}
+      ${TABS.map(t=>`<button class="tab-btn ${STATE.tab===t.id?'active':''}" data-tab="${t.id}">${t.label}</button>`).join('')}
     </div>
 
     <div style="width:100%;max-width:420px;">
@@ -818,6 +822,100 @@ function render(){
     ${STATE.showLogForm  ? renderLogForm()     : ''}
     ${STATE.showSettings ? renderSettingsForm(): ''}
   `;
+  // Modal overlay dismiss on background tap
+  const logOverlay = document.getElementById('modal-log-overlay');
+  if(logOverlay) logOverlay.onclick = e=>{ if(e.target===logOverlay) setState({showLogForm:false}); };
+  const settingsOverlay = document.getElementById('modal-settings-overlay');
+  if(settingsOverlay) settingsOverlay.onclick = e=>{ if(e.target===settingsOverlay) setState({showSettings:false}); };
+
+  // Bind all events after DOM update
+  setTimeout(bindEvents, 0);
+}
+
+/* ── bind interactive elements after every render ── */
+function bindEvents(){
+  // Log form submit
+  const logSubmit = document.getElementById('btn-log-submit');
+  if(logSubmit) logSubmit.onclick = collectAndLog;
+
+  // Save brand
+  const saveBrandBtn = document.getElementById('btn-save-brand');
+  if(saveBrandBtn) saveBrandBtn.onclick = saveBrand;
+
+  // Save settings
+  const saveSettingsBtn = document.getElementById('btn-save-settings');
+  if(saveSettingsBtn) saveSettingsBtn.onclick = collectAndSaveSettings;
+
+  // Sign out
+  const signOutBtn = document.getElementById('btn-sign-out');
+  if(signOutBtn) signOutBtn.onclick = signOut;
+
+  // Sign in / sign up
+  const authSubmit = document.getElementById('btn-auth-submit');
+  if(authSubmit) authSubmit.onclick = STATE.authMode==='signup' ? signUp : signIn;
+
+  // Undo last
+  const undoBtn = document.getElementById('btn-undo');
+  if(undoBtn) undoBtn.onclick = undoLast;
+
+  // Open log form
+  const openLog = document.getElementById('btn-open-log');
+  if(openLog) openLog.onclick = ()=>setState({showLogForm:true});
+
+  // Close log form
+  const closeLog = document.getElementById('btn-close-log');
+  if(closeLog) closeLog.onclick = ()=>setState({showLogForm:false});
+
+  // Open settings
+  const openSettings = document.getElementById('btn-open-settings');
+  if(openSettings) openSettings.onclick = ()=>setState({showSettings:true,editSettings:{...STATE.settings}});
+
+  // Close settings
+  const closeSettings = document.getElementById('btn-close-settings');
+  if(closeSettings) closeSettings.onclick = ()=>setState({showSettings:false});
+
+  // Brand delete buttons
+  document.querySelectorAll('[data-delete-brand]').forEach(btn=>{
+    btn.onclick = ()=>deleteBrand(btn.dataset.deleteBrand);
+  });
+
+  // Tab buttons
+  document.querySelectorAll('[data-tab]').forEach(btn=>{
+    btn.onclick = ()=>setState({tab:btn.dataset.tab});
+  });
+
+  // Auth mode toggle
+  document.querySelectorAll('[data-auth-mode]').forEach(btn=>{
+    btn.onclick = ()=>{ _authRendered=false; setState({authMode:btn.dataset.authMode,authError:''}); };
+  });
+
+  // Log form brand select
+  const brandSelect = document.getElementById('lf-brand');
+  if(brandSelect) brandSelect.onchange = e=>setState({logForm:{...STATE.logForm,brandId:e.target.value}});
+
+  // Log form type buttons
+  document.querySelectorAll('[data-log-type]').forEach(btn=>{
+    btn.onclick = ()=>setState({logForm:{...STATE.logForm,type:btn.dataset.logType}});
+  });
+
+  // Crew refresh
+  const crewRefresh = document.getElementById('btn-crew-refresh');
+  if(crewRefresh) crewRefresh.onclick = ()=>{ loadLeaderboard(); loadTrashTalks(); };
+
+  // Leaderboard expand
+  document.querySelectorAll('[data-expand-user]').forEach(btn=>{
+    btn.onclick = ()=>setState({expandedUser:STATE.expandedUser===btn.dataset.expandUser?null:btn.dataset.expandUser});
+  });
+
+  // Trash talk fire buttons
+  document.querySelectorAll('[data-trash-target-id]').forEach(btn=>{
+    btn.onclick = ()=>generateTrashTalk(btn.dataset.trashTargetId, btn.dataset.trashTargetName);
+  });
+
+  // Trash talk inputs
+  document.querySelectorAll('[data-trash-input]').forEach(inp=>{
+    inp.oninput = e=>{ STATE.trashInputs[inp.dataset.trashInput]=e.target.value; };
+  });
 }
 
 /* ── timer tick — direct DOM updates only, no re-render ── */
