@@ -9,1020 +9,814 @@
   <title>HitList</title>
   <link rel="manifest" href="manifest.json"/>
   <link href="https://fonts.googleapis.com/css2?family=VT323&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
-    html,body{height:100%;background:#050508;color:#e8e8f0;font-family:'Orbitron',sans-serif;overflow-x:hidden;}
+    html,body,#root{min-height:100%;background:#050508;}
+    body{background:#050508;color:#e8e8f0;font-family:'Orbitron',sans-serif;
+      background-image:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,245,255,0.012) 3px,rgba(0,245,255,0.012) 4px);}
     input,select,button{font-family:inherit;}
     input::placeholder{color:#444;}
     select option{background:#0f0f1e;}
     ::-webkit-scrollbar{width:4px;}
     ::-webkit-scrollbar-track{background:#050508;}
     ::-webkit-scrollbar-thumb{background:#2a2a38;border-radius:2px;}
-
-    @keyframes pulse-pink{0%,100%{opacity:0.9}50%{opacity:1}}
-    @keyframes pulse-green{0%,100%{opacity:0.85}50%{opacity:1}}
-    @keyframes pulse-yellow{0%,100%{opacity:0.9}50%{opacity:1}}
     @keyframes float{0%,100%{transform:translateY(0px)}50%{transform:translateY(-8px)}}
-    @keyframes float-ready{0%,100%{transform:translateY(0px) scale(1.01)}33%{transform:translateY(-11px) scale(1.03)}66%{transform:translateY(-5px) scale(1.01)}}
+    @keyframes float-ready{0%,100%{transform:translateY(0px)}33%{transform:translateY(-11px)}66%{transform:translateY(-5px)}}
     @keyframes lid-open{0%{transform:rotate(0deg) translateY(0)}100%{transform:rotate(-42deg) translateY(-6px)}}
     @keyframes lid-close{0%{transform:rotate(-42deg) translateY(-6px)}100%{transform:rotate(0deg) translateY(0)}}
     @keyframes smoke-rise{0%{opacity:.7;transform:translateY(0) scaleX(1)}100%{opacity:0;transform:translateY(-28px) scaleX(2.2)}}
     @keyframes sparkle{0%{opacity:0;transform:scale(0) rotate(0deg)}50%{opacity:1;transform:scale(1.3) rotate(180deg)}100%{opacity:0;transform:scale(0) rotate(360deg)}}
     @keyframes slide-up{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes neon-border{0%,100%{box-shadow:0 0 5px #00f5ff,0 0 15px #00f5ff,inset 0 0 5px rgba(0,245,255,.1)}50%{box-shadow:0 0 12px #00f5ff,0 0 32px #00f5ff,0 0 60px #00f5ff,inset 0 0 10px rgba(0,245,255,.2)}}
+    @keyframes neon-pulse{0%,100%{opacity:0.85}50%{opacity:1}}
     @keyframes trophy-bounce{0%,100%{transform:scale(1)}50%{transform:scale(1.18) rotate(-4deg)}}
     @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-
-    .scanlines{background-image:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,245,255,0.012) 3px,rgba(0,245,255,0.012) 4px);}
-    .card{background:rgba(0,0,0,0.6);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
-    .neon-input{width:100%;background:rgba(0,0,0,0.7);border-radius:8px;color:#e8e8f0;font-size:16px;padding:10px 12px;font-family:'VT323',monospace;outline:none;}
-    .tab-btn{flex:1;padding:7px 0;border:none;border-radius:7px;cursor:pointer;background:transparent;color:#444;font-size:9px;font-family:'Orbitron',sans-serif;font-weight:700;letter-spacing:0.5px;transition:all 0.2s;}
-    .tab-btn.active{color:#00f5ff;text-shadow:0 0 6px #00f5ff,0 0 12px #00f5ff,0 0 24px #00f5ff;background:rgba(0,245,255,0.12);box-shadow:0 0 8px rgba(0,245,255,0.3);}
-    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:flex;align-items:flex-end;justify-content:center;z-index:100;}
-    .modal-sheet{background:#08080f;border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:440px;animation:slide-up 0.3s ease;}
-    .spinner{width:32px;height:32px;border:3px solid rgba(0,245,255,0.2);border-top-color:#00f5ff;border-radius:50%;animation:spin 0.8s linear infinite;}
+    .spinner{width:36px;height:36px;border:3px solid rgba(0,245,255,0.2);border-top-color:#00f5ff;border-radius:50%;animation:spin 0.8s linear infinite;}
+    .tab-active{color:#00f5ff!important;background:rgba(0,245,255,0.12)!important;box-shadow:0 0 8px rgba(0,245,255,0.3)!important;}
   </style>
 </head>
-<body class="scanlines">
-<div id="app" style="display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:16px 16px 90px;"></div>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
 
-<script>
-const SUPABASE_URL = 'https://nfijpadekyrmudtzlnqu.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5maWpwYWRla3lybXVkdHpsbnF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MTUyOTcsImV4cCI6MjA5NDE5MTI5N30.0hrefMd03K-fNU6frpsNB5d1bw-fwvIQQB-RcRvwk8U';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPA_URL = 'https://nfijpadekyrmudtzlnqu.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5maWpwYWRla3lybXVkdHpsbnF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MTUyOTcsImV4cCI6MjA5NDE5MTI5N30.0hrefMd03K-fNU6frpsNB5d1bw-fwvIQQB-RcRvwk8U';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 const N = {pink:'#ff2d78',cyan:'#00f5ff',yellow:'#ffe600',green:'#39ff14',purple:'#bf5fff',orange:'#ff6b1a'};
-const glow = (c,s=20) => `0 0 ${s/4}px ${c},0 0 ${s}px ${c},0 0 ${s*2}px ${c}`;
+const glow = (c,s=16) => `0 0 ${s/4}px ${c},0 0 ${s}px ${c},0 0 ${s*1.5}px ${c}`;
 const TYPES = ['🚬 Cigarette','💨 Vape','🟤 Pouch','🌿 Dip','⚡ Other'];
 const MEDAL = ['🥇','🥈','🥉'];
-
-/* ── state ── */
-let _renderScheduled = false;
-function scheduleRender(){
-  if(_renderScheduled) return;
-  _renderScheduled = true;
-  setTimeout(()=>{ _renderScheduled = false; render(); }, 16);
-}
-
-let STATE = {
-  session: null, profile: null, tab: 'today',
-  logs: [], brands: [], settings: {daily_goal:10,daily_spend_limit:5,interval_minutes:60},
-  timerStart: null, now: Date.now(),
-  leaderboard: [], trashTalks: {}, trashInputs: {}, expandedUser: null,
-  logForm: {type:TYPES[0],brandId:'',mg:'',cost:'',note:''},
-  showLogForm: false, showSettings: false, editSettings: null,
-  newBrand: {name:'',mg:'',pricePerUnit:'',type:TYPES[0]},
-  authMode: 'signin', authEmail:'', authPassword:'', authUsername:'',
-  authError:'', authLoading:false, loading:true, pulse:false,
-};
-
-function setState(patch){ Object.assign(STATE, patch); scheduleRender(); }
-
-/* ── helpers ── */
 const todayKey = () => new Date().toISOString().split('T')[0];
-const fmtMoney = n => `$${(+n||0).toFixed(2)}`;
-const fmtTime  = s => new Date(s).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-const fmtDay   = s => new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short'});
 const getLast7 = () => Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(6-i));return d.toISOString().split('T')[0];});
+const fmtMoney = n => `$${(+n||0).toFixed(2)}`;
+const fmtTime = s => new Date(s).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+const fmtDay = s => new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short'});
 
-/* ── supabase calls ── */
-async function loadUserData(){
-  const uid = STATE.session.user.id;
-  const [logsRes, brandsRes, settingsRes] = await Promise.all([
-    sb.from('logs').select('*').eq('user_id',uid).order('logged_at',{ascending:false}),
-    sb.from('brands').select('*').eq('user_id',uid).order('created_at'),
-    sb.from('settings').select('*').eq('user_id',uid).single(),
-  ]);
-  const settings = settingsRes.data || {daily_goal:10,daily_spend_limit:5,interval_minutes:60};
-  setState({
-    logs: logsRes.data||[],
-    brands: brandsRes.data||[],
-    settings,
-    editSettings: {...settings},
-    loading: false,
-  });
+function Card({children,color=N.cyan,style={},animate=false}){
+  return <div style={{background:'rgba(0,0,0,0.6)',border:`1px solid ${color}`,borderRadius:12,
+    padding:'14px 16px',marginBottom:12,boxShadow:`0 0 8px ${color}44,inset 0 0 8px ${color}11`,
+    animation:animate?'neon-pulse 2s ease-in-out infinite':'none',...style}}>{children}</div>;
+}
+function NBtn({children,onClick,color=N.pink,full=false,small=false,style={},disabled=false}){
+  return <button onClick={onClick} disabled={disabled} style={{
+    background:`${color}22`,border:`2px solid ${color}`,borderRadius:8,color,
+    fontFamily:"'Orbitron',sans-serif",fontSize:small?10:13,fontWeight:700,
+    padding:small?'5px 10px':'11px 20px',cursor:'pointer',width:full?'100%':'auto',
+    textShadow:glow(color,8),boxShadow:`0 0 8px ${color}44`,letterSpacing:1,
+    opacity:disabled?0.5:1,...style}}>{children}</button>;
+}
+function NInput({value,onChange,placeholder,type='text',color=N.cyan,style={}}){
+  return <input type={type} value={value} onChange={onChange} placeholder={placeholder}
+    style={{width:'100%',boxSizing:'border-box',background:'rgba(0,0,0,0.7)',
+      border:`1px solid ${color}88`,borderRadius:8,color:'#e8e8f0',fontSize:16,
+      padding:'10px 12px',fontFamily:"'VT323',monospace",outline:'none',
+      boxShadow:`0 0 6px ${color}44`,caretColor:color,...style}}/>;
+}
+function VT({children,color='#888',size=13,style={}}){
+  return <div style={{fontFamily:"'VT323',monospace",fontSize:size,color,letterSpacing:2,...style}}>{children}</div>;
 }
 
-async function loadLeaderboard(){
-  const {data} = await sb.from('profiles').select(`
-    id, username,
-    logs(logged_at, cost, mg),
-    settings(daily_goal, daily_spend_limit)
-  `);
-  if(!data) return;
-  const today = todayKey();
-  const last7 = getLast7();
-  const board = data.map(p=>{
-    const todayLogs = (p.logs||[]).filter(l=>l.logged_at.startsWith(today));
-    const weekLogs  = (p.logs||[]).filter(l=>last7.some(d=>l.logged_at.startsWith(d)));
-    return {
-      id: p.id,
-      username: p.username,
-      todayCount: todayLogs.length,
-      todayGoal: p.settings?.daily_goal||10,
-      todaySpend: todayLogs.reduce((a,l)=>a+(l.cost||0),0),
-      weekTotal: weekLogs.length,
-    };
-  }).sort((a,b)=>(a.todayCount/(a.todayGoal||10))-(b.todayCount/(b.todayGoal||10)));
-  setState({leaderboard: board});
+function PouchCan({isReady,timerColor,pct,hideReady=false}){
+  const cc=isReady?N.green:timerColor;
+  const floatAnim=isReady?'float-ready 2s ease-in-out infinite':'float 3.2s ease-in-out infinite';
+  const lidAnim=isReady?'lid-open 0.55s cubic-bezier(.2,1.4,.6,1) forwards':'lid-close 0.4s ease forwards';
+  const fillY=30+82*(1-Math.min(pct,1));
+  const fillH=82*Math.min(pct,1);
+  return(
+    <div style={{position:'relative',width:160,height:130,animation:floatAnim,filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.7))'}}>
+      {isReady&&[{t:-14,l:14,d:0},{t:-8,l:128,d:.25},{t:24,l:-10,d:.5},{t:20,l:148,d:.75}].map((sp,i)=>(
+        <div key={i} style={{position:'absolute',top:sp.t,left:sp.l,fontSize:12,color:N.green,
+          textShadow:glow(N.green,6),animation:`sparkle 1.6s ${sp.d}s ease-in-out infinite`}}>✦</div>
+      ))}
+      <svg width="160" height="130" viewBox="0 0 160 130" style={{overflow:'visible'}}>
+        <defs>
+          <linearGradient id="sg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#0a0a14"/><stop offset="30%" stopColor="#252545"/>
+            <stop offset="50%" stopColor="#2e2e52"/><stop offset="100%" stopColor="#080810"/>
+          </linearGradient>
+          <linearGradient id="lg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#0c0c1a"/><stop offset="50%" stopColor="#28284a"/>
+            <stop offset="100%" stopColor="#0a0a18"/>
+          </linearGradient>
+          <radialGradient id="ri" cx="50%" cy="50%" r="50%">
+            <stop offset="70%" stopColor="transparent"/>
+            <stop offset="100%" stopColor="rgba(0,0,0,0.5)"/>
+          </radialGradient>
+          <linearGradient id="fg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor={cc} stopOpacity="0"/>
+            <stop offset="50%" stopColor={cc} stopOpacity="0.12"/>
+            <stop offset="100%" stopColor={cc} stopOpacity="0"/>
+          </linearGradient>
+          <clipPath id="bc"><rect x="6" y="30" width="148" height="82" rx="2"/></clipPath>
+        </defs>
+        <rect x="6" y="30" width="148" height="82" rx="3" fill="url(#sg)" stroke={cc} strokeWidth="1"/>
+        <rect x="6" y={fillY} width="148" height={fillH} rx="2" fill="url(#fg)" clipPath="url(#bc)"/>
+        <rect x="9" y="32" width="6" height="78" rx="3" fill="rgba(255,255,255,0.05)" clipPath="url(#bc)"/>
+        <rect x="6" y="30" width="148" height="5" rx="2" fill={cc} opacity="0.55"/>
+        <rect x="6" y="107" width="148" height="5" rx="2" fill={cc} opacity="0.45"/>
+        <rect x="6" y="66" width="148" height="1.5" fill={cc} opacity="0.25"/>
+        <rect x="30" y="42" width="100" height="52" rx="4" fill="rgba(0,0,0,0.35)" stroke={cc} strokeWidth="0.6" strokeOpacity="0.4"/>
+        <text x="80" y="62" textAnchor="middle" fill={cc} fontSize="13" fontFamily="'Orbitron',sans-serif" fontWeight="900" letterSpacing="2">HIT</text>
+        <text x="80" y="74" textAnchor="middle" fill={cc} fontSize="8" fontFamily="'Orbitron',sans-serif" letterSpacing="4">LIST</text>
+        <rect x="46" y="79" width="68" height="8" rx="2" fill={cc} opacity="0.12" stroke={cc} strokeWidth="0.5"/>
+        <text x="80" y="86" textAnchor="middle" fill={cc} fontSize="6.5" fontFamily="'VT323',monospace" letterSpacing="3">YOUR HABIT. YOUR RULES.</text>
+        <ellipse cx="80" cy="112" rx="74" ry="12" fill="#07070f" stroke={cc} strokeWidth="0.8" strokeOpacity="0.6"/>
+        <ellipse cx="80" cy="30" rx="74" ry="12" fill="#111126" stroke={cc} strokeWidth="1.2"/>
+        <ellipse cx="80" cy="30" rx="74" ry="12" fill="url(#ri)"/>
+        <path d="M 18 26 Q 80 18 142 26" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" strokeLinecap="round"/>
+        <ellipse cx="80" cy="22" rx="7" ry="4" fill="#1a1a30" stroke={cc} strokeWidth="0.8"/>
+        <ellipse cx="80" cy="22" rx="3.5" ry="2" fill={cc} opacity="0.7"/>
+        <g style={{transformOrigin:'80px 22px',animation:lidAnim}}>
+          <rect x="8" y="10" width="144" height="20" rx="3" fill="url(#lg)" stroke={cc} strokeWidth="1"/>
+          <ellipse cx="80" cy="10" rx="72" ry="11" fill="#0e0e20" stroke={cc} strokeWidth="1"/>
+          <ellipse cx="80" cy="10" rx="72" ry="11" fill="url(#ri)"/>
+          <rect x="8" y="27" width="144" height="3" rx="1" fill={cc} opacity="0.6"/>
+          {[28,80,132].map(x=><rect key={x} x={x-6} y="28" width="12" height="5" rx="2" fill={cc} opacity="0.7"/>)}
+          <text x="80" y="23" textAnchor="middle" fill={cc} fontSize="7" fontFamily="'Orbitron',sans-serif" fontWeight="700" letterSpacing="3">
+            {isReady?'● OPEN ●':'▬▬▬▬▬'}
+          </text>
+          <ellipse cx="80" cy="30" rx="72" ry="11" fill="#070710"/>
+          {isReady&&<><ellipse cx="80" cy="30" rx="42" ry="6" fill="#1a1230" opacity="0.9"/>
+            <ellipse cx="65" cy="31" rx="14" ry="4" fill="#2a1840" opacity="0.8"/>
+            <ellipse cx="90" cy="30" rx="12" ry="3.5" fill="#221440" opacity="0.8"/></>}
+        </g>
+        {isReady&&[{cx:58,cy:8,rx:6,ry:4,d:'0s'},{cx:80,cy:2,rx:5,ry:3,d:'0.18s'},{cx:102,cy:6,rx:4,ry:3,d:'0.36s'}].map((s,i)=>(
+          <ellipse key={i} cx={s.cx} cy={s.cy} rx={s.rx} ry={s.ry} fill={N.green} opacity="0.55"
+            style={{animation:`smoke-rise 1.3s ${s.d} ease-out infinite`,filter:'blur(2px)'}}/>
+        ))}
+      </svg>
+      {isReady&&!hideReady&&(
+        <div style={{position:'absolute',bottom:-26,left:'50%',transform:'translateX(-50%)',
+          fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:900,color:N.green,
+          textShadow:glow(N.green,10),letterSpacing:3,whiteSpace:'nowrap',
+          animation:'neon-pulse 1s ease-in-out infinite'}}>READY ▶</div>
+      )}
+    </div>
+  );
 }
 
-async function loadTrashTalks(){
-  if(!STATE.profile) return;
-  const uid = STATE.profile.id;
-  const {data} = await sb.from('trash_talks').select(`
-    *,
-    from_profile:from_user_id(username),
-    to_profile:to_user_id(username)
-  `).or(`from_user_id.eq.${uid},to_user_id.eq.${uid}`);
-  if(!data) return;
-  const map = {};
-  data.forEach(t=>{
-    const targetUser = t.to_profile?.username;
-    if(!map[targetUser] || t.created_at > map[targetUser].created_at){
-      map[targetUser] = {from:t.from_profile?.username, text:t.message, created_at:t.created_at};
-    }
-  });
-  setState({trashTalks: map});
-}
-
-async function signUp(){
-  setState({authLoading:true, authError:''});
-  if(!STATE.authUsername.trim()){setState({authError:'Please enter a username',authLoading:false});return;}
-  if(STATE.authPassword.length < 6){setState({authError:'Password must be at least 6 characters',authLoading:false});return;}
-  const {data:existing} = await sb.from('profiles').select('id').eq('username', STATE.authUsername.trim().toUpperCase()).maybeSingle();
-  if(existing){setState({authError:'Username already taken — try another',authLoading:false});return;}
-  localStorage.setItem('hl_pending_username', STATE.authUsername.trim().toUpperCase());
-  const {data,error} = await sb.auth.signUp({email:STATE.authEmail, password:STATE.authPassword});
-  if(error){setState({authError:error.message,authLoading:false});return;}
-  setState({authLoading:false, authError:'✓ Check your email and click the confirmation link!'});
-}
-
-async function signIn(){
-  setState({authLoading:true, authError:''});
-  const {error} = await sb.auth.signInWithPassword({email:STATE.authEmail,password:STATE.authPassword});
-  if(error) setState({authError:error.message,authLoading:false});
-}
-
-async function signOut(){
-  await sb.auth.signOut();
-  _authRendered = false;
-  setState({session:null,profile:null,logs:[],brands:[],settings:{daily_goal:10,daily_spend_limit:5,interval_minutes:60},showSettings:false,authMode:'signin',authEmail:'',authPassword:'',authUsername:'',authError:''});
-}
-
-async function logUse(){
-  const uid = STATE.session.user.id;
-  const brand = STATE.brands.find(b=>b.id===STATE.logForm.brandId);
-  const cost = STATE.logForm.cost!==''?+STATE.logForm.cost:brand?brand.price_per_unit:0;
-  const mg   = STATE.logForm.mg!==''?+STATE.logForm.mg:brand?brand.mg:null;
-  const entry = {
-    user_id:uid, logged_at:new Date().toISOString(),
-    type:brand?brand.type:STATE.logForm.type,
-    brand_name:brand?brand.name:null, mg, cost:+cost||0,
-    note:STATE.logForm.note||null,
-  };
-  const {data} = await sb.from('logs').insert(entry).select().single();
-  if(data){
-    setState({logs:[data,...STATE.logs], timerStart:Date.now(),
-      showLogForm:false, pulse:true,
-      logForm:{type:TYPES[0],brandId:'',mg:'',cost:'',note:''}});
-    setTimeout(()=>setState({pulse:false}),400);
-  }
-}
-
-async function undoLast(){
-  const todayLogs = STATE.logs.filter(l=>l.logged_at.startsWith(todayKey()));
-  if(!todayLogs.length) return;
-  const last = todayLogs[0];
-  await sb.from('logs').delete().eq('id',last.id);
-  setState({logs:STATE.logs.filter(l=>l.id!==last.id)});
-}
-
-async function addBrand(){
-  if(!STATE.newBrand.name) return;
-  const {data} = await sb.from('brands').insert({
-    user_id:STATE.session.user.id,
-    name:STATE.newBrand.name, mg:+STATE.newBrand.mg||0,
-    price_per_unit:+STATE.newBrand.pricePerUnit||0,
-    type:STATE.newBrand.type,
-  }).select().single();
-  if(data){
-    setState({brands:[...STATE.brands,data],newBrand:{name:'',mg:'',pricePerUnit:'',type:TYPES[0]}});
-  }
-}
-
-async function deleteBrand(id){
-  await sb.from('brands').delete().eq('id',id);
-  setState({brands:STATE.brands.filter(b=>b.id!==id)});
-}
-
-async function saveSettings(){
-  const uid = STATE.session.user.id;
-  const s = {
-    user_id:uid,
-    daily_goal:+STATE.editSettings.daily_goal||10,
-    daily_spend_limit:+STATE.editSettings.daily_spend_limit||0,
-    interval_minutes:+STATE.editSettings.interval_minutes||60,
-    updated_at:new Date().toISOString(),
-  };
-  await sb.from('settings').upsert(s);
-  setState({settings:s, showSettings:false});
-}
-
-async function generateTrashTalk(targetId, targetUsername){
-  const myData = STATE.leaderboard.find(p=>p.id===STATE.profile.id);
-  const targetData = STATE.leaderboard.find(p=>p.id===targetId);
-  if(!targetData) return;
-  setState({trashTalks:{...STATE.trashTalks,[targetUsername]:{text:'',loading:true}}});
-  try{
-    const prompt = `You are a hilarious trash-talking scoreboard announcer for a nicotine reduction app called HITLIST. Generate ONE short savage funny trash talk (max 2 sentences, 80s arcade vibe) from "${STATE.profile.username}" to "${targetUsername}". Stats: ${STATE.profile.username}: ${myData?.todayCount||0}/${myData?.todayGoal||10} uses. ${targetUsername}: ${targetData.todayCount}/${targetData.todayGoal} uses, $${targetData.todaySpend?.toFixed(2)||'0.00'} spent. Context: "${STATE.trashInputs[targetUsername]||'just roast them'}". Rules: fun not mean, reference stats, 80s arcade energy, ALL CAPS key phrases, max 2 sentences.`;
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]}),
-    });
-    const d = await res.json();
-    const text = d.content?.map(c=>c.text||'').join('')||'ROAST.EXE FAILED';
-    await sb.from('trash_talks').insert({
-      from_user_id:STATE.profile.id, to_user_id:targetId, message:text,
-    });
-    setState({trashTalks:{...STATE.trashTalks,[targetUsername]:{text,loading:false,from:STATE.profile.username}}});
-  }catch{
-    setState({trashTalks:{...STATE.trashTalks,[targetUsername]:{text:'SYSTEM ERROR: ROAST.EXE CRASHED',loading:false}}});
-  }
-}
-
-/* ── can SVG ── */
-function canSVG(isReady, timerColor, pct, hideReady=false){
-  const cc = isReady ? N.green : timerColor;
-  const glowAnim = isReady ? 'pulse-green 1.8s ease-in-out infinite' :
-    timerColor===N.pink ? 'pulse-pink 2.5s ease-in-out infinite' :
-    timerColor===N.yellow ? 'pulse-yellow 2.5s ease-in-out infinite' : 'pulse-green 2.5s ease-in-out infinite';
-  const floatAnim = isReady ? 'float-ready 2s ease-in-out infinite' : 'float 3.2s ease-in-out infinite';
-  const lidAnim = isReady ? 'lid-open 0.55s cubic-bezier(.2,1.4,.6,1) forwards' : 'lid-close 0.4s ease forwards';
-  const fillY = 30 + 82*(1-Math.min(pct,1));
-  const fillH = 82*Math.min(pct,1);
-
-  const sparkles = isReady ? [{t:-14,l:14,d:0},{t:-8,l:128,d:.25},{t:24,l:-10,d:.5},{t:20,l:148,d:.75},{t:60,l:-6,d:.12},{t:58,l:152,d:.62}]
-    .map(sp=>`<div style="position:absolute;top:${sp.t}px;left:${sp.l}px;font-size:12px;color:${N.green};text-shadow:${glow(N.green,6)};animation:sparkle 1.6s ${sp.d}s ease-in-out infinite">✦</div>`).join('') : '';
-
-  const smokePuffs = isReady ? [{cx:58,cy:8,rx:6,ry:4,d:'0s'},{cx:80,cy:2,rx:5,ry:3,d:'0.18s'},{cx:102,cy:6,rx:4,ry:3,d:'0.36s'},{cx:70,cy:-2,rx:3,ry:2.5,d:'0.54s'}]
-    .map(s=>`<ellipse cx="${s.cx}" cy="${s.cy}" rx="${s.rx}" ry="${s.ry}" fill="${N.green}" opacity="0.55" style="animation:smoke-rise 1.3s ${s.d} ease-out infinite;filter:blur(2px)"/>`).join('') : '';
-
-  const pouchPile = isReady ? `<ellipse cx="80" cy="30" rx="42" ry="6" fill="#1a1230" opacity="0.9"/>
-    <ellipse cx="65" cy="31" rx="14" ry="4" fill="#2a1840" opacity="0.8"/>
-    <ellipse cx="90" cy="30" rx="12" ry="3.5" fill="#221440" opacity="0.8"/>
-    <ellipse cx="78" cy="29" rx="10" ry="3" fill="#301a50" opacity="0.9"/>` : '';
-
-  const readyLabel = (!hideReady && isReady) ? `<div style="position:absolute;bottom:-26px;left:50%;transform:translateX(-50%);font-family:'Orbitron',sans-serif;font-size:11px;font-weight:900;color:${N.green};text-shadow:${glow(N.green,10)};letter-spacing:3px;white-space:nowrap;animation:pulse-green 1s ease-in-out infinite">READY ▶</div>` : '';
-
-  return `<div style="position:relative;width:160px;height:130px;animation:${floatAnim};-webkit-transform:translateZ(0);transform:translateZ(0);will-change:transform;">
-    ${sparkles}
-    <svg width="160" height="130" viewBox="0 0 160 130" style="overflow:visible;-webkit-transform:translateZ(0);transform:translateZ(0);">
-      <defs>
-        <linearGradient id="sideGrad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#0a0a14"/><stop offset="12%" stop-color="#1a1a30"/>
-          <stop offset="30%" stop-color="#252545"/><stop offset="50%" stop-color="#2e2e52"/>
-          <stop offset="68%" stop-color="#1e1e3a"/><stop offset="88%" stop-color="#111126"/>
-          <stop offset="100%" stop-color="#080810"/>
-        </linearGradient>
-        <linearGradient id="lidBodyGrad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#0c0c1a"/><stop offset="20%" stop-color="#1c1c34"/>
-          <stop offset="50%" stop-color="#28284a"/><stop offset="80%" stop-color="#181830"/>
-          <stop offset="100%" stop-color="#0a0a18"/>
-        </linearGradient>
-        <radialGradient id="rimInner" cx="50%" cy="50%" r="50%">
-          <stop offset="70%" stop-color="transparent"/>
-          <stop offset="100%" stop-color="rgba(0,0,0,0.5)"/>
-        </radialGradient>
-        <linearGradient id="fillGrad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="${cc}" stop-opacity="0.0"/>
-          <stop offset="20%" stop-color="${cc}" stop-opacity="0.06"/>
-          <stop offset="50%" stop-color="${cc}" stop-opacity="0.12"/>
-          <stop offset="80%" stop-color="${cc}" stop-opacity="0.06"/>
-          <stop offset="100%" stop-color="${cc}" stop-opacity="0.0"/>
-        </linearGradient>
-        <clipPath id="bodyClip"><rect x="6" y="30" width="148" height="82" rx="2"/></clipPath>
-      </defs>
-      <rect x="6" y="30" width="148" height="82" rx="3" fill="url(#sideGrad)" stroke="${cc}" stroke-width="1"/>
-      <rect x="6" y="${fillY}" width="148" height="${fillH}" rx="2" fill="url(#fillGrad)" clip-path="url(#bodyClip)" style="transition:y 1s linear,height 1s linear"/>
-      <rect x="9" y="32" width="6" height="78" rx="3" fill="rgba(255,255,255,0.05)" clip-path="url(#bodyClip)"/>
-      <rect x="145" y="32" width="5" height="78" rx="2" fill="rgba(0,0,0,0.3)" clip-path="url(#bodyClip)"/>
-      <rect x="6" y="30" width="148" height="5" rx="2" fill="${cc}" opacity="0.55"/>
-      <rect x="6" y="107" width="148" height="5" rx="2" fill="${cc}" opacity="0.45"/>
-      <rect x="6" y="66" width="148" height="1.5" fill="${cc}" opacity="0.25"/>
-      <rect x="30" y="42" width="100" height="52" rx="4" fill="rgba(0,0,0,0.35)" stroke="${cc}" stroke-width="0.6" stroke-opacity="0.4"/>
-      <text x="80" y="62" text-anchor="middle" fill="${cc}" font-size="13" font-family="'Orbitron',sans-serif" font-weight="900" letter-spacing="2" style="filter:drop-shadow(0 0 4px ${cc})">HIT</text>
-      <text x="80" y="74" text-anchor="middle" fill="${cc}" font-size="8" font-family="'Orbitron',sans-serif" font-weight="400" letter-spacing="4" style="filter:drop-shadow(0 0 3px ${cc})">LIST</text>
-      <rect x="46" y="79" width="68" height="8" rx="2" fill="${cc}" opacity="0.12" stroke="${cc}" stroke-width="0.5" stroke-opacity="0.5"/>
-      <text x="80" y="86" text-anchor="middle" fill="${cc}" font-size="6.5" font-family="'VT323',monospace" letter-spacing="3">YOUR HABIT. YOUR RULES.</text>
-      <ellipse cx="80" cy="112" rx="74" ry="12" fill="#07070f" stroke="${cc}" stroke-width="0.8" stroke-opacity="0.6"/>
-      <ellipse cx="80" cy="112" rx="60" ry="8" fill="#0a0a18" opacity="0.7"/>
-      <ellipse cx="80" cy="30" rx="74" ry="12" fill="#111126" stroke="${cc}" stroke-width="1.2"/>
-      <ellipse cx="80" cy="30" rx="74" ry="12" fill="url(#rimInner)"/>
-      <path d="M 18 26 Q 80 18 142 26" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5" stroke-linecap="round"/>
-      <ellipse cx="80" cy="22" rx="7" ry="4" fill="#1a1a30" stroke="${cc}" stroke-width="0.8"/>
-      <ellipse cx="80" cy="22" rx="3.5" ry="2" fill="${cc}" opacity="0.7"/>
-      <g style="transform-origin:80px 22px;animation:${lidAnim}">
-        <rect x="8" y="10" width="144" height="20" rx="3" fill="url(#lidBodyGrad)" stroke="${cc}" stroke-width="1"/>
-        <ellipse cx="80" cy="10" rx="72" ry="11" fill="#0e0e20" stroke="${cc}" stroke-width="1"/>
-        <ellipse cx="80" cy="10" rx="72" ry="11" fill="url(#rimInner)"/>
-        <path d="M 22 7 Q 80 1 138 7" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="1.5" stroke-linecap="round"/>
-        <rect x="8" y="27" width="144" height="3" rx="1" fill="${cc}" opacity="0.6"/>
-        <rect x="8" y="10" width="144" height="3" rx="2" fill="${cc}" opacity="0.3"/>
-        <rect x="22" y="28" width="12" height="5" rx="2" fill="${cc}" opacity="0.7"/><rect x="74" y="28" width="12" height="5" rx="2" fill="${cc}" opacity="0.7"/><rect x="126" y="28" width="12" height="5" rx="2" fill="${cc}" opacity="0.7"/>
-        <text x="80" y="23" text-anchor="middle" fill="${cc}" font-size="7" font-family="'Orbitron',sans-serif" font-weight="700" letter-spacing="3" style="filter:drop-shadow(0 0 3px ${cc})">${isReady?'● OPEN ●':'▬▬▬▬▬'}</text>
-        <ellipse cx="80" cy="30" rx="72" ry="11" fill="#070710" stroke="${cc}" stroke-width="0.5" stroke-opacity="0.4"/>
-        <ellipse cx="80" cy="30" rx="55" ry="8" fill="#0c0c1e" opacity="0.9"/>
-        ${pouchPile}
-      </g>
-      ${smokePuffs}
+function Ring({pct,size=210,stroke=10,color=N.green}){
+  const r=(size-stroke)/2,circ=2*Math.PI*r;
+  return(
+    <svg width={size} height={size} style={{transform:'rotate(-90deg)',position:'absolute',top:0,left:0}}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={stroke}/>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+        strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={circ*(1-Math.max(pct,0))}
+        style={{transition:'stroke-dashoffset 1s linear,stroke 0.4s'}}/>
     </svg>
-    ${readyLabel}
-  </div>`;
+  );
 }
 
-/* ── render helpers ── */
-function card(color, content, style='', animate=false){
-  return `<div class="card" style="border:1px solid ${color};box-shadow:0 0 8px ${color}44,inset 0 0 8px ${color}11;${animate?'animation:neon-border 2s ease-in-out infinite;':''}${style}">${content}</div>`;
-}
-function neonBtn(color, text, onclick, extra=''){
-  return `<button onclick="${onclick}" style="background:${color}22;border:2px solid ${color};border-radius:8px;color:${color};font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;padding:11px 20px;cursor:pointer;text-shadow:${glow(color,8)};box-shadow:0 0 8px ${color}44;letter-spacing:1px;transition:all 0.2s;${extra}">${text}</button>`;
-}
-function neonInput(id, val, placeholder, type='text', color=N.cyan, extra=''){
-  return `<input class="neon-input" id="${id}" type="${type}" value="${escHtml(val||'')}" placeholder="${placeholder}" style="border:1px solid ${color}88;box-shadow:0 0 6px ${color}44;caret-color:${color};${extra}"/>`;
-}
-function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function vt(text, color='#888', size=13, extra=''){
-  return `<div style="font-family:'VT323',monospace;font-size:${size}px;color:${color};letter-spacing:2px;${extra}">${text}</div>`;
-}
+function AuthScreen(){
+  const [mode,setMode]=useState('signin');
+  const [email,setEmail]=useState('');
+  const [password,setPass]=useState('');
+  const [username,setUser]=useState('');
+  const [error,setError]=useState('');
+  const [loading,setLoading]=useState(false);
+  const isSignUp=mode==='signup';
 
-/* ── derived today stats ── */
-function todayStats(){
-  const today = todayKey();
-  const todayLogs = STATE.logs.filter(l=>l.logged_at.startsWith(today));
-  return {
-    todayLogs,
-    todayCount: todayLogs.length,
-    todaySpend: todayLogs.reduce((a,l)=>a+(l.cost||0),0),
-    totalMg: todayLogs.reduce((a,l)=>a+(l.mg||0),0),
-    hasMg: todayLogs.some(l=>l.mg),
+  const signIn=async()=>{
+    setLoading(true);setError('');
+    const {error:e}=await sb.auth.signInWithPassword({email,password});
+    if(e)setError(e.message);
+    setLoading(false);
   };
-}
+  const signUp=async()=>{
+    setLoading(true);setError('');
+    if(!username.trim()){setError('Please enter a username');setLoading(false);return;}
+    if(password.length<6){setError('Password must be 6+ characters');setLoading(false);return;}
+    const uname=username.trim().toUpperCase();
+    const {data:existing}=await sb.from('profiles').select('id').eq('username',uname).maybeSingle();
+    if(existing){setError('Username taken — try another');setLoading(false);return;}
+    localStorage.setItem('hl_pending_username',uname);
+    const {error:e}=await sb.auth.signUp({email,password});
+    if(e){setError(e.message);setLoading(false);return;}
+    setError('✓ Check your email and click the confirmation link!');
+    setLoading(false);
+  };
 
-/* ── SCREENS ── */
-function renderAuth(){
-  const isSignUp = STATE.authMode==='signup';
-  return `
-  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;width:100%;">
-    <div style="text-align:center;margin-bottom:36px;animation:slide-up 0.8s ease;">
-      <div style="display:flex;justify-content:center;margin-bottom:16px;transform:scale(1.25);transform-origin:center center;">
-        ${canSVG(true, N.cyan, 1, true)}
-      </div>
-      <div style="position:relative;z-index:10;font-family:'VT323',monospace;font-size:28px;color:${N.yellow};text-shadow:${glow(N.yellow,10)};letter-spacing:4px;margin-top:20px;">YOUR HABIT. YOUR RULES.</div>
-    </div>
-
-    ${card(N.cyan, `
-      <div style="display:flex;margin-bottom:16px;gap:4px;background:rgba(0,0,0,0.4);border-radius:8px;padding:4px;">
-        <button data-auth-mode="signin" style="flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;background:${!isSignUp?N.cyan+'22':'transparent'};color:${!isSignUp?N.cyan:'#444'};font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-shadow:${!isSignUp?glow(N.cyan,6):'none'};">SIGN IN</button>
-        <button data-auth-mode="signup" style="flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;background:${isSignUp?N.cyan+'22':'transparent'};color:${isSignUp?N.cyan:'#444'};font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-shadow:${isSignUp?glow(N.cyan,6):'none'};">SIGN UP</button>
-      </div>
-      ${isSignUp ? `
-        <div style="margin-bottom:10px;">
-          ${vt('USERNAME','#666',13,'margin-bottom:6px;')}
-          ${neonInput('auth-username', STATE.authUsername, 'e.g. NEON_WOLF', 'text', N.cyan, 'text-transform:uppercase;')}
-        </div>` : ''}
-      <div style="margin-bottom:10px;">
-        ${vt('EMAIL','#666',13,'margin-bottom:6px;')}
-        ${neonInput('auth-email', STATE.authEmail, 'your@email.com', 'email', N.cyan)}
-      </div>
-      <div style="margin-bottom:16px;">
-        ${vt('PASSWORD','#666',13,'margin-bottom:6px;')}
-        ${neonInput('auth-password', STATE.authPassword, '••••••••', 'password', N.cyan)}
-      </div>
-      ${STATE.authError ? `<div id="auth-error"><div style="font-family:'VT323',monospace;font-size:15px;color:${STATE.authError.includes('Check')?N.green:N.pink};margin-bottom:12px;text-align:center;">${STATE.authError}</div></div>` : '<div id="auth-error"></div>'}
-      <div id="auth-submit">
-        ${STATE.authLoading
-          ? `<div style="display:flex;justify-content:center;padding:12px;"><div class="spinner"></div></div>`
-          : `<button id="btn-auth-submit" style="width:100%;background:${N.pink}22;border:2px solid ${N.pink};border-radius:8px;color:${N.pink};font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;padding:11px 20px;cursor:pointer;text-shadow:${glow(N.pink,8)};box-shadow:0 0 8px ${N.pink}44;letter-spacing:1px;">${isSignUp?'CREATE ACCOUNT →':'ENTER THE GRID →'}</button>`
-        }
-      </div>
-    `, 'width:100%;max-width:340px;', true)}
-  </div>`;
-}
-
-function renderToday(){
-  const s = STATE.settings;
-  const {todayLogs, todayCount, todaySpend, totalMg, hasMg} = todayStats();
-  const pctGoal = Math.min(todayCount/(s.daily_goal||10),1);
-  const pctSpend = s.daily_spend_limit>0 ? Math.min(todaySpend/(s.daily_spend_limit),1) : 0;
-  const intervalMs = (s.interval_minutes||60)*60*1000;
-  const elapsedMs = STATE.timerStart ? STATE.now-STATE.timerStart : intervalMs;
-  const remainingMs = Math.max(intervalMs-elapsedMs,0);
-  const timerPct = STATE.timerStart ? Math.min(elapsedMs/intervalMs,1) : 1;
-  const timerReady = timerPct>=1;
-  const timerMins = Math.floor(remainingMs/60000);
-  const timerSecs = Math.floor((remainingMs%60000)/1000);
-  const timerColor = timerReady?N.green:timerPct>0.6?N.yellow:N.pink;
-  const statusColor = todayCount===0?N.green:pctGoal<0.7?N.green:pctGoal<1?N.yellow:N.pink;
-
-  const r = (200-10)/2, circ = 2*Math.PI*r;
-  const dash = circ*(1-Math.max(timerPct,0));
-
-  return `
-  <div style="animation:slide-up 0.4s ease;width:100%;">
-    ${card(timerColor, `
-      ${vt('NEXT USE COUNTDOWN', timerColor, 13, `text-shadow:${glow(timerColor,6)};margin-bottom:18px;`)}
-      <div style="position:relative;width:210px;height:210px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
-        <svg width="210" height="210" style="transform:rotate(-90deg);position:absolute;top:0;left:0;">
-          <circle cx="105" cy="105" r="${r}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="10"/>
-          <circle cx="105" cy="105" r="${r}" fill="none" stroke="${timerColor}" stroke-width="10" stroke-linecap="round"
-            id="timer-ring" stroke-dasharray="${circ}" stroke-dashoffset="${dash}"
-            style="transition:stroke-dashoffset 1s linear,stroke 0.4s;filter:drop-shadow(0 0 4px ${timerColor}44)"/>
-        </svg>
-        ${!timerReady ? `<div id="timer-countdown" data-was-ready="false" style="position:absolute;top:14px;left:0;right:0;text-align:center;z-index:2;font-family:'VT323',monospace;font-size:24px;color:${timerColor};text-shadow:${glow(timerColor,8)}">${timerMins}:${String(timerSecs).padStart(2,'0')}</div>` : ''}
-        <div style="position:relative;z-index:3;margin-top:16px;">${canSVG(timerReady, timerColor, timerPct)}</div>
-      </div>
-      ${vt(`INTERVAL: ${s.interval_minutes||60} MIN`,'#444',13,'letter-spacing:2px;')}
-    `, 'display:flex;flex-direction:column;align-items:center;padding:24px 16px 20px;')}
-
-    <div style="display:flex;gap:10px;margin-bottom:12px;">
-      ${card(statusColor, `
-        <div style="font-family:'Orbitron',sans-serif;font-size:46px;font-weight:900;color:${statusColor};text-shadow:${glow(statusColor,20)};line-height:1;">${todayCount}</div>
-        ${vt(`OF ${s.daily_goal||10} GOAL`,'#555',14,'margin-top:4px;')}
-        <div style="background:rgba(255,255,255,0.05);border-radius:4px;height:5px;margin-top:10px;overflow:hidden;">
-          <div style="height:100%;border-radius:4px;width:${pctGoal*100}%;background:${statusColor};box-shadow:0 0 8px ${statusColor};transition:width 0.4s;"></div>
+  return(
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
+      <div style={{textAlign:'center',marginBottom:36,animation:'slide-up 0.8s ease'}}>
+        <div style={{display:'flex',justifyContent:'center',marginBottom:16,transform:'scale(1.2)',transformOrigin:'center center'}}>
+          <PouchCan isReady={true} timerColor={N.cyan} pct={1} hideReady={true}/>
         </div>
-      `, 'flex:1;text-align:center;margin-bottom:0;')}
-      ${card(pctSpend>=1?N.pink:N.yellow, `
-        <div style="font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;color:${pctSpend>=1?N.pink:N.yellow};text-shadow:${glow(pctSpend>=1?N.pink:N.yellow,15)};line-height:1;">${fmtMoney(todaySpend)}</div>
-        ${vt(s.daily_spend_limit>0?`OF ${fmtMoney(s.daily_spend_limit)}`:'SPENT','#555',14,'margin-top:4px;')}
-        ${s.daily_spend_limit>0?`<div style="background:rgba(255,255,255,0.05);border-radius:4px;height:5px;margin-top:10px;overflow:hidden;"><div style="height:100%;border-radius:4px;width:${pctSpend*100}%;background:${pctSpend>=1?N.pink:N.yellow};transition:width 0.4s;"></div></div>`:''}
-      `, 'flex:1;text-align:center;margin-bottom:0;')}
+        <div style={{fontFamily:"'VT323',monospace",fontSize:28,color:N.yellow,textShadow:glow(N.yellow,10),letterSpacing:4,marginTop:20}}>
+          YOUR HABIT. YOUR RULES.
+        </div>
+      </div>
+      <Card color={N.cyan} style={{width:'100%',maxWidth:340}} animate>
+        <div style={{display:'flex',gap:4,background:'rgba(0,0,0,0.4)',borderRadius:8,padding:4,marginBottom:16}}>
+          {['signin','signup'].map(m=>(
+            <button key={m} onClick={()=>{setMode(m);setError('');}}
+              style={{flex:1,padding:8,border:'none',borderRadius:6,cursor:'pointer',
+                background:mode===m?`${N.cyan}22`:'transparent',color:mode===m?N.cyan:'#444',
+                fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,
+                textShadow:mode===m?glow(N.cyan,6):'none'}}>
+              {m==='signin'?'SIGN IN':'SIGN UP'}
+            </button>
+          ))}
+        </div>
+        {isSignUp&&(
+          <div style={{marginBottom:10}}>
+            <VT color="#666" size={13} style={{marginBottom:6}}>USERNAME</VT>
+            <NInput value={username} onChange={e=>setUser(e.target.value)} placeholder="e.g. NEON_WOLF" color={N.cyan} style={{textTransform:'uppercase'}}/>
+          </div>
+        )}
+        <div style={{marginBottom:10}}>
+          <VT color="#666" size={13} style={{marginBottom:6}}>EMAIL</VT>
+          <NInput value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com" type="email" color={N.cyan}/>
+        </div>
+        <div style={{marginBottom:16}}>
+          <VT color="#666" size={13} style={{marginBottom:6}}>PASSWORD</VT>
+          <NInput value={password} onChange={e=>setPass(e.target.value)} placeholder="••••••••" type="password" color={N.cyan}/>
+        </div>
+        {error&&<div style={{fontFamily:"'VT323',monospace",fontSize:15,marginBottom:12,textAlign:'center',color:error.startsWith('✓')?N.green:N.pink}}>{error}</div>}
+        {loading
+          ?<div style={{display:'flex',justifyContent:'center',padding:12}}><div className="spinner"/></div>
+          :<NBtn onClick={isSignUp?signUp:signIn} color={N.pink} full>{isSignUp?'CREATE ACCOUNT →':'ENTER THE GRID →'}</NBtn>
+        }
+      </Card>
     </div>
-
-    ${hasMg ? card(N.purple, `
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        ${vt('TOTAL NICOTINE','#888',15)}
-        <div style="font-family:'Orbitron',sans-serif;font-size:20px;font-weight:700;color:${N.purple};text-shadow:${glow(N.purple,10)}">${totalMg} mg</div>
-      </div>`) : ''}
-
-    <button id="btn-open-log" style="width:100%;padding:18px;border:2px solid ${N.pink};border-radius:12px;background:${STATE.pulse?N.pink+'33':N.pink+'11'};color:${N.pink};font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:2px;text-shadow:${glow(N.pink,10)};box-shadow:0 0 20px ${N.pink}44,inset 0 0 20px ${N.pink}11;transform:${STATE.pulse?'scale(0.97)':'scale(1)'};transition:all 0.15s;margin-bottom:10px;">+ LOG A USE</button>
-    ${todayLogs.length>0 ? `<button id="btn-undo" style="width:100%;padding:10px;border:1px solid #333;border-radius:8px;background:transparent;color:#666;font-family:'Orbitron',sans-serif;font-size:13px;cursor:pointer;">↩ UNDO LAST</button>` : ''}
-  </div>`;
+  );
 }
 
-function renderWeek(){
-  const days = getLast7();
-  const today = todayKey();
-  const s = STATE.settings;
-  const max7 = Math.max(...days.map(d=>STATE.logs.filter(l=>l.logged_at.startsWith(d)).length), s.daily_goal||10, 1);
-  const maxSpend = Math.max(...days.map(d=>STATE.logs.filter(l=>l.logged_at.startsWith(d)).reduce((a,l)=>a+(l.cost||0),0)), s.daily_spend_limit||0, 0.01);
-  const totals = {
-    uses: days.reduce((a,d)=>a+STATE.logs.filter(l=>l.logged_at.startsWith(d)).length,0),
-    mg:   days.reduce((a,d)=>a+STATE.logs.filter(l=>l.logged_at.startsWith(d)).reduce((b,l)=>b+(l.mg||0),0),0),
-    spend:days.reduce((a,d)=>a+STATE.logs.filter(l=>l.logged_at.startsWith(d)).reduce((b,l)=>b+(l.cost||0),0),0),
+function MainApp({session,profile}){
+  const [tab,setTab]=useState('today');
+  const [logs,setLogs]=useState([]);
+  const [brands,setBrands]=useState([]);
+  const [settings,setSettings]=useState({daily_goal:10,daily_spend_limit:5,interval_minutes:60});
+  const [timerStart,setTimerStart]=useState(null);
+  const [now,setNow]=useState(Date.now());
+  const [showLog,setShowLog]=useState(false);
+  const [showSettings,setShowSettings]=useState(false);
+  const [leaderboard,setLeaderboard]=useState([]);
+  const [trashTalks,setTrashTalks]=useState({});
+  const [trashInputs,setTrashInputs]=useState({});
+  const [expandedUser,setExpandedUser]=useState(null);
+  const [logForm,setLogForm]=useState({type:TYPES[0],brandId:'',mg:'',cost:'',note:''});
+  const [newBrand,setNewBrand]=useState({name:'',mg:'',pricePerUnit:'',type:TYPES[0]});
+  const [editSettings,setEditSettings]=useState(null);
+  const [pulse,setPulse]=useState(false);
+  const [dataLoading,setDataLoading]=useState(true);
+
+  useEffect(()=>{
+    const uid=session.user.id;
+    Promise.all([
+      sb.from('logs').select('*').eq('user_id',uid).order('logged_at',{ascending:false}),
+      sb.from('brands').select('*').eq('user_id',uid).order('created_at'),
+      sb.from('settings').select('*').eq('user_id',uid).single(),
+    ]).then(([l,b,s])=>{
+      setLogs(l.data||[]);
+      setBrands(b.data||[]);
+      if(s.data)setSettings(s.data);
+      setDataLoading(false);
+    });
+  },[session]);
+
+  useEffect(()=>{const t=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(t);},[]);
+
+  const intervalMs=(settings.interval_minutes||60)*60*1000;
+  const elapsedMs=timerStart?now-timerStart:intervalMs;
+  const remainingMs=Math.max(intervalMs-elapsedMs,0);
+  const timerPct=timerStart?Math.min(elapsedMs/intervalMs,1):1;
+  const timerReady=timerPct>=1;
+  const timerMins=Math.floor(remainingMs/60000);
+  const timerSecs=Math.floor((remainingMs%60000)/1000);
+  const timerColor=timerReady?N.green:timerPct>0.6?N.yellow:N.pink;
+  const today=todayKey();
+  const todayLogs=logs.filter(l=>l.logged_at.startsWith(today));
+  const todayCount=todayLogs.length;
+  const todaySpend=todayLogs.reduce((a,l)=>a+(l.cost||0),0);
+  const pctGoal=Math.min(todayCount/(settings.daily_goal||10),1);
+  const pctSpend=settings.daily_spend_limit>0?Math.min(todaySpend/settings.daily_spend_limit,1):0;
+  const statusColor=todayCount===0?N.green:pctGoal<0.7?N.green:pctGoal<1?N.yellow:N.pink;
+  const days=getLast7();
+  const max7=Math.max(...days.map(d=>logs.filter(l=>l.logged_at.startsWith(d)).length),settings.daily_goal||10,1);
+
+  const logUse=async()=>{
+    const brand=brands.find(b=>b.id===logForm.brandId);
+    const cost=logForm.cost!==''?+logForm.cost:brand?brand.price_per_unit:0;
+    const mg=logForm.mg!==''?+logForm.mg:brand?brand.mg:null;
+    const entry={user_id:session.user.id,logged_at:new Date().toISOString(),
+      type:brand?brand.type:logForm.type,brand_name:brand?brand.name:null,
+      mg,cost:+cost||0,note:logForm.note||null};
+    const {data}=await sb.from('logs').insert(entry).select().single();
+    if(data){setLogs(p=>[data,...p]);setTimerStart(Date.now());
+      setPulse(true);setTimeout(()=>setPulse(false),400);
+      setShowLog(false);setLogForm({type:TYPES[0],brandId:'',mg:'',cost:'',note:''});}
   };
 
-  const useBars = days.map(d=>{
-    const cnt = STATE.logs.filter(l=>l.logged_at.startsWith(d)).length;
-    const h = cnt===0?4:Math.round((cnt/max7)*110);
-    const over = cnt>(s.daily_goal||10);
-    const col = cnt===0?'#1a1a2e':over?N.pink:d===today?N.green:N.cyan;
-    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-      <div style="font-size:10px;color:${col};font-family:'VT323',monospace">${cnt||''}</div>
-      <div style="width:100%;height:${h}px;border-radius:4px 4px 0 0;background:${col};box-shadow:0 0 8px ${col}88;transition:height 0.5s;"></div>
-    </div>`;
-  }).join('');
+  const undoLast=async()=>{
+    if(!todayLogs.length)return;
+    const last=todayLogs[0];
+    await sb.from('logs').delete().eq('id',last.id);
+    setLogs(p=>p.filter(l=>l.id!==last.id));
+  };
 
-  const spendBars = days.map(d=>{
-    const sp = STATE.logs.filter(l=>l.logged_at.startsWith(d)).reduce((a,l)=>a+(l.cost||0),0);
-    const h = sp===0?4:Math.round((sp/maxSpend)*60);
-    const over = s.daily_spend_limit>0&&sp>s.daily_spend_limit;
-    const col = sp===0?'#1a1a2e':over?N.pink:d===today?N.yellow:N.orange;
-    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
-      <div style="font-size:9px;color:${col};font-family:'VT323',monospace">${sp>0?'$'+sp.toFixed(1):''}</div>
-      <div style="width:100%;height:${h}px;border-radius:4px 4px 0 0;background:${col};box-shadow:0 0 6px ${col}88;"></div>
-    </div>`;
-  }).join('');
+  const addBrand=async()=>{
+    if(!newBrand.name)return;
+    const {data}=await sb.from('brands').insert({user_id:session.user.id,name:newBrand.name,
+      mg:+newBrand.mg||0,price_per_unit:+newBrand.pricePerUnit||0,type:newBrand.type}).select().single();
+    if(data){setBrands(p=>[...p,data]);setNewBrand({name:'',mg:'',pricePerUnit:'',type:TYPES[0]});}
+  };
 
-  const dayLabels = days.map(d=>`<div style="flex:1;text-align:center;font-size:10px;font-family:'VT323',monospace;letter-spacing:1px;color:${d===today?'#e8e8f0':'#444'}">${fmtDay(d)}</div>`).join('');
+  const deleteBrand=async(id)=>{
+    await sb.from('brands').delete().eq('id',id);
+    setBrands(p=>p.filter(b=>b.id!==id));
+  };
 
-  return `<div style="animation:slide-up 0.4s ease;width:100%;">
-    ${card(N.cyan, `
-      ${vt('USES — LAST 7 DAYS',N.cyan,13,`text-shadow:${glow(N.cyan,6)};margin-bottom:16px;`)}
-      <div style="display:flex;gap:6px;align-items:flex-end;height:120px;margin-bottom:8px;">${useBars}</div>
-      <div style="display:flex;gap:6px;margin-bottom:20px;">${dayLabels}</div>
-      ${vt('SPEND — LAST 7 DAYS',N.yellow,13,`text-shadow:${glow(N.yellow,6)};margin-bottom:12px;`)}
-      <div style="display:flex;gap:6px;align-items:flex-end;height:70px;margin-bottom:8px;">${spendBars}</div>
-      <div style="border-top:1px solid ${N.cyan}33;padding-top:16px;margin-top:8px;display:flex;justify-content:space-between;text-align:center;">
-        ${[[`USES`,totals.uses,N.cyan],[`AVG`,(totals.uses/7).toFixed(1),N.purple],[`MG`,totals.mg,N.green],[`$`,fmtMoney(totals.spend),N.yellow]]
-          .map(([l,v,c])=>`<div><div style="font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:${c};text-shadow:${glow(c,8)}">${v}</div>${vt(l,'#555',12)}</div>`).join('')}
-      </div>
-    `)}
-  </div>`;
-}
+  const saveSettings=async()=>{
+    const s={user_id:session.user.id,daily_goal:+editSettings.daily_goal||10,
+      daily_spend_limit:+editSettings.daily_spend_limit||0,
+      interval_minutes:+editSettings.interval_minutes||60,updated_at:new Date().toISOString()};
+    await sb.from('settings').upsert(s);
+    setSettings(s);setShowSettings(false);
+  };
 
-function renderLog(){
-  const today = todayKey();
-  const todayLogs = STATE.logs.filter(l=>l.logged_at.startsWith(today));
-  return `<div style="animation:slide-up 0.4s ease;width:100%;">
-    ${vt("TODAY'S ENTRIES",N.cyan,13,`text-shadow:${glow(N.cyan,6)};margin-bottom:12px;`)}
-    ${todayLogs.length===0
-      ? card('#333','<div style="font-family:\'VT323\',monospace;font-size:18px;color:#444;letter-spacing:3px;text-align:center;">NO ENTRIES YET</div>','padding:32px;')
-      : todayLogs.map(e=>card(N.purple,`
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-          <div>
-            <div style="font-family:'Orbitron',sans-serif;font-size:13px;color:${N.purple};text-shadow:${glow(N.purple,6)}">${escHtml(e.brand_name||e.type)}</div>
-            <div style="font-family:'VT323',monospace;font-size:14px;color:#666;margin-top:4px;display:flex;gap:12px;">
-              ${e.mg?`<span style="color:${N.cyan}">${e.mg}mg</span>`:''}
-              ${e.cost?`<span style="color:${N.yellow}">${fmtMoney(e.cost)}</span>`:''}
-              ${e.note?`<span style="font-style:italic;color:#555">"${escHtml(e.note)}"</span>`:''}
-            </div>
-          </div>
-          <div style="font-family:'VT323',monospace;font-size:14px;color:#444">${fmtTime(e.logged_at)}</div>
-        </div>`)).join('')}
-  </div>`;
-}
+  const signOut=async()=>{await sb.auth.signOut();};
 
-function renderGear(){
-  const nb = STATE.newBrand;
-  return `<div style="animation:slide-up 0.4s ease;width:100%;">
-    ${vt('YOUR GEAR',N.yellow,13,`text-shadow:${glow(N.yellow,6)};margin-bottom:12px;`)}
-    ${STATE.brands.length===0?`<div style="font-family:'VT323',monospace;font-size:15px;color:#444;margin-bottom:12px;text-align:center;">NO BRANDS YET</div>`:''}
-    ${STATE.brands.map(b=>card(N.yellow,`
-      <div style="display:flex;justify-content:space-between;align-items:center;">
+  const fetchLeaderboard=async()=>{
+    if(!window.storage)return;
+    try{
+      const r=await window.storage.list('lb:',true);
+      const keys=r?.keys||[];
+      const entries=await Promise.all(keys.map(k=>window.storage.get(k,true).then(r=>r?JSON.parse(r.value):null).catch(()=>null)));
+      setLeaderboard(entries.filter(Boolean).filter(e=>Date.now()-e.lastSeen<7*24*60*60*1000)
+        .sort((a,b)=>(a.todayCount/(a.todayGoal||10))-(b.todayCount/(b.todayGoal||10))));
+    }catch{}
+  };
+
+  const fetchTrashTalks=async()=>{
+    if(!window.storage||!profile)return;
+    try{
+      const r=await window.storage.list('tt:',true);
+      const keys=r?.keys||[];
+      const entries=await Promise.all(keys.map(async k=>{
+        const v=await window.storage.get(k,true).catch(()=>null);
+        if(!v)return null;
+        return{target:k.replace('tt:',''),data:JSON.parse(v.value)};
+      }));
+      const map={};
+      entries.filter(Boolean).forEach(({target,data})=>{map[target]=data;});
+      setTrashTalks(map);
+    }catch{}
+  };
+
+  useEffect(()=>{if(tab==='crew'){fetchLeaderboard();fetchTrashTalks();}},[tab]);
+
+  const generateTrashTalk=async(targetUsername)=>{
+    const targetData=leaderboard.find(p=>p.username===targetUsername);
+    if(!targetData)return;
+    setTrashTalks(p=>({...p,[targetUsername]:{text:'',loading:true}}));
+    try{
+      const myData=leaderboard.find(p=>p.username===profile.username);
+      const prompt=`You are a hilarious trash-talking scoreboard announcer for a nicotine reduction app called HITLIST. Generate ONE short savage funny trash talk (max 2 sentences, 80s arcade vibe) from "${profile.username}" to "${targetUsername}". Stats: ${profile.username}: ${myData?.todayCount||0}/${myData?.todayGoal||10} uses. ${targetUsername}: ${targetData.todayCount}/${targetData.todayGoal} uses, $${targetData.todaySpend?.toFixed(2)||'0.00'} spent. Context: "${trashInputs[targetUsername]||'just roast them'}". Rules: fun not mean, 80s arcade energy, ALL CAPS key phrases, max 2 sentences.`;
+      const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,
+          messages:[{role:'user',content:prompt}]})});
+      const d=await res.json();
+      const text=d.content?.map(c=>c.text||'').join('')||'ROAST.EXE FAILED';
+      await window.storage?.set(`tt:${targetUsername}`,JSON.stringify({from:profile.username,text,timestamp:Date.now()}),true).catch(()=>{});
+      setTrashTalks(p=>({...p,[targetUsername]:{text,loading:false,from:profile.username}}));
+    }catch{
+      setTrashTalks(p=>({...p,[targetUsername]:{text:'SYSTEM ERROR: ROAST.EXE CRASHED',loading:false}}));
+    }
+  };
+
+  if(dataLoading)return(
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh'}}>
+      <div className="spinner"/>
+    </div>
+  );
+
+  const TABS=[{id:'today',label:'TODAY'},{id:'week',label:'WEEK'},{id:'log',label:'LOG'},{id:'brands',label:'GEAR'},{id:'crew',label:'CREW'}];
+
+  return(
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'16px 16px 90px'}}>
+      {/* HEADER */}
+      <div style={{width:'100%',maxWidth:420,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
         <div>
-          <div style="font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:${N.yellow};text-shadow:${glow(N.yellow,6)}">${escHtml(b.name)}</div>
-          <div style="font-family:'VT323',monospace;font-size:14px;color:#666;margin-top:3px">${b.type} · ${b.mg}mg · ${fmtMoney(b.price_per_unit)}/unit</div>
+          <div style={{fontSize:28,fontWeight:900,color:N.pink,lineHeight:1}}>HIT<span style={{color:N.cyan}}>LIST</span></div>
+          <VT color={N.yellow} size={14} style={{textShadow:glow(N.yellow,6),letterSpacing:3,marginTop:2}}>{profile?.username} ▮</VT>
         </div>
-        <button data-delete-brand="${b.id}" style="background:transparent;border:none;color:${N.pink};font-size:20px;cursor:pointer;text-shadow:${glow(N.pink,6)}">×</button>
-      </div>`)).join('')}
-    ${card(N.green,`
-      ${vt('ADD GEAR',N.green,13,`text-shadow:${glow(N.green,6)};margin-bottom:12px;`)}
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        ${neonInput('nb-name',nb.name,'Brand name (e.g. ZYN 6mg)','text',N.green)}
-        <div style="display:flex;gap:8px;">
-          ${neonInput('nb-mg',nb.mg,'mg','number',N.green,'width:50%')}
-          ${neonInput('nb-price',nb.pricePerUnit,'$/unit','number',N.green,'width:50%')}
-        </div>
-        <select id="nb-type" style="width:100%;background:rgba(0,0,0,0.7);border:1px solid ${N.green}88;border-radius:8px;color:#e8e8f0;font-size:16px;padding:10px 12px;font-family:'VT323',monospace;outline:none;">
-          ${TYPES.map(t=>`<option value="${t}" ${nb.type===t?'selected':''}>${t}</option>`).join('')}
-        </select>
-        ${`<button id="btn-save-brand" style="width:100%;background:${N.green}22;border:2px solid ${N.green};border-radius:8px;color:${N.green};font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;padding:11px 20px;cursor:pointer;text-shadow:${glow(N.green,8)};letter-spacing:1px;">SAVE GEAR</button>`}
+        <button onClick={()=>{setEditSettings({...settings});setShowSettings(true);}}
+          style={{background:'transparent',border:`1px solid ${N.purple}66`,borderRadius:8,
+            color:N.purple,padding:'8px 10px',cursor:'pointer',fontSize:16,textShadow:glow(N.purple,6)}}>⚙</button>
       </div>
-    `)}
-  </div>`;
-}
 
-function renderCrew(){
-  const lb = STATE.leaderboard;
-  return `<div style="animation:slide-up 0.4s ease;width:100%;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      ${vt('THE CREW',N.pink,13,`text-shadow:${glow(N.pink,6)};`)}
-      <button id="btn-crew-refresh" style="background:${N.cyan}22;border:2px solid ${N.cyan};border-radius:8px;color:${N.cyan};font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;padding:5px 10px;cursor:pointer;text-shadow:${glow(N.cyan,6)};">↻ REFRESH</button>
-    </div>
-    ${card(N.purple,`
-      ${vt('HOW TO ADD FRIENDS',N.purple,14,`text-shadow:${glow(N.purple,6)};margin-bottom:8px;`)}
-      <div style="font-family:'VT323',monospace;font-size:14px;color:#666;line-height:1.6">
-        1. SHARE YOUR APP URL WITH YOUR CREW<br/>
-        2. EVERYONE SIGNS UP WITH A UNIQUE HANDLE<br/>
-        3. YOU'LL ALL APPEAR HERE AUTOMATICALLY<br/>
-        4. RANKED BY WHO'S CLOSEST TO THEIR GOAL
+      {/* TABS */}
+      <div style={{display:'flex',gap:4,background:'rgba(0,0,0,0.6)',border:`1px solid ${N.cyan}33`,borderRadius:10,padding:4,marginBottom:20,width:'100%',maxWidth:420}}>
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} className={`tab-btn${tab===t.id?' tab-active':''}`}
+            style={{flex:1,padding:'7px 0',border:'none',borderRadius:7,cursor:'pointer',background:'transparent',
+              color:'#444',fontSize:9,fontFamily:"'Orbitron',sans-serif",fontWeight:700,letterSpacing:0.5}}>
+            {t.label}
+          </button>
+        ))}
       </div>
-      <div style="margin-top:10px;font-family:'Orbitron',sans-serif;font-size:11px;color:${N.yellow};text-shadow:${glow(N.yellow,4)}">YOUR HANDLE: ${escHtml(STATE.profile?.username||'')}</div>
-    `)}
-    ${lb.length===0
-      ? card('#333','<div style="font-family:\'VT323\',monospace;font-size:16px;color:#444;letter-spacing:3px;text-align:center;line-height:1.8">NO CREW YET<br/><span style="font-size:12px;color:#333">SHARE THE APP TO SEE FRIENDS</span></div>','padding:32px;')
-      : lb.map((p,i)=>{
-          const pct = p.todayCount/(p.todayGoal||10);
-          const isMe = p.id===STATE.profile?.id;
-          const rankColor = i===0?N.yellow:i===1?'#c0c0c0':i===2?'#cd7f32':N.cyan;
-          const statusTxt = pct===0?'CLEAN':pct<=0.5?'CRUSHING IT':pct<=1?'ON TRACK':'OVER LIMIT';
-          const statusCol = pct===0?N.green:pct<=0.5?N.green:pct<=1?N.yellow:N.pink;
-          const talk = STATE.trashTalks[p.username];
-          const isExpanded = STATE.expandedUser===p.username;
-          const trashInput = STATE.trashInputs[p.username]||'';
 
-          const expandedPanel = isExpanded ? `
-            <div style="margin-top:14px;border-top:1px solid ${rankColor}33;padding-top:14px;animation:slide-up 0.3s ease;">
-              ${!isMe ? `
-                ${talk&&talk.from!==STATE.profile?.username?`
-                  <div style="background:rgba(255,45,120,0.08);border:1px solid ${N.pink}44;border-radius:8px;padding:10px 12px;margin-bottom:12px;">
-                    ${vt(`📢 INCOMING FROM ${escHtml(talk.from)}`,N.pink,11,'margin-bottom:6px;')}
-                    <div style="font-family:'VT323',monospace;font-size:15px;color:#e8e8f0;line-height:1.5">${escHtml(talk.text)}</div>
-                  </div>` : ''}
-                ${vt(`🔥 SEND TRASH TALK TO ${escHtml(p.username)}`,N.orange,11,'margin-bottom:8px;')}
-                <input class="neon-input" data-trash-input="${p.username}" value="${escHtml(trashInput)}" placeholder="Give context... or just hit FIRE" style="border:1px solid ${N.orange}88;margin-bottom:10px;"/>
-                ${talk&&talk.from===STATE.profile?.username?`
-                  <div style="background:rgba(255,107,26,0.08);border:1px solid ${N.orange}44;border-radius:8px;padding:10px 12px;margin-bottom:10px;">
-                    ${vt('⚡ YOUR ROAST PREVIEW',N.orange,11,'margin-bottom:6px;')}
-                    ${talk.loading
-                      ? `<div style="font-family:'VT323',monospace;font-size:15px;color:${N.orange};animation:pulse-pink 0.8s ease-in-out infinite">GENERATING ROAST.EXE...</div>`
-                      : `<div style="font-family:'VT323',monospace;font-size:15px;color:#e8e8f0;line-height:1.5">${escHtml(talk.text)}</div>`}
-                  </div>` : ''}
-                <div style="display:flex;gap:8px;">
-                  ${`<button data-trash-target-id="${p.id}" data-trash-target-name="${p.username}" style="flex:1;font-size:12px;padding:9px 16px;background:${N.orange}22;border:2px solid ${N.orange};border-radius:8px;color:${N.orange};font-family:'Orbitron',sans-serif;font-weight:700;cursor:pointer;text-shadow:${glow(N.orange,8)}">${talk?.loading?'GENERATING...':'🔥 FIRE THE ROAST'}</button>`}
-                  ${talk&&!talk.loading ? `<button data-trash-target-id="${p.id}" data-trash-target-name="${p.username}" style="font-size:11px;padding:9px 14px;background:${N.pink}22;border:2px solid ${N.pink};border-radius:8px;color:${N.pink};font-family:'Orbitron',sans-serif;font-weight:700;cursor:pointer;">↻</button>` : ''}
-                </div>
-              ` : `
-                ${talk&&talk.from!==STATE.profile?.username?`
-                  <div style="background:rgba(255,45,120,0.1);border:1px solid ${N.pink}44;border-radius:8px;padding:12px 14px;">
-                    ${vt(`📢 ${escHtml(talk.from)} SENT YOU A ROAST:`,N.pink,11,'margin-bottom:8px;')}
-                    <div style="font-family:'VT323',monospace;font-size:16px;color:#e8e8f0;line-height:1.5">${escHtml(talk.text)}</div>
-                  </div>`
-                  : `<div style="font-family:'VT323',monospace;font-size:14px;color:#333;text-align:center;letter-spacing:2px;">NO ROASTS YET... YOU'RE SAFE</div>`}
-              `}
-            </div>` : '';
+      <div style={{width:'100%',maxWidth:420}}>
 
-          return card(isMe?N.pink:rankColor, `
-            <div style="display:flex;align-items:center;gap:12px;cursor:pointer;" data-expand-user="${p.username}">
-              <div style="font-family:'Orbitron',sans-serif;font-size:20px;color:${rankColor};text-shadow:${glow(rankColor,10)};min-width:32px;text-align:center;${i===0?'animation:trophy-bounce 2s ease-in-out infinite;':''}">${i<3?MEDAL[i]:`#${i+1}`}</div>
-              <div style="flex:1;">
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <div style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:${isMe?N.pink:'#e8e8f0'};text-shadow:${isMe?glow(N.pink,8):'none'}">${escHtml(p.username)}</div>
-                  ${isMe?`<div style="font-family:'VT323',monospace;font-size:11px;color:${N.pink};border:1px solid ${N.pink}66;border-radius:4px;padding:1px 5px;text-shadow:${glow(N.pink,4)}">YOU</div>`:''}
+        {tab==='today'&&(
+          <div style={{animation:'slide-up 0.4s ease'}}>
+            <Card color={timerColor} animate={timerReady} style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'24px 16px 20px'}}>
+              <VT color={timerColor} size={13} style={{textShadow:glow(timerColor,6),marginBottom:18}}>NEXT USE COUNTDOWN</VT>
+              <div style={{position:'relative',width:210,height:210,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:12}}>
+                <Ring pct={timerPct} color={timerColor}/>
+                {!timerReady&&(
+                  <div style={{position:'absolute',top:14,left:0,right:0,textAlign:'center',zIndex:2,
+                    fontFamily:"'VT323',monospace",fontSize:24,color:timerColor,textShadow:glow(timerColor,8)}}>
+                    {timerMins}:{String(timerSecs).padStart(2,'0')}
+                  </div>
+                )}
+                <div style={{position:'relative',zIndex:3,marginTop:16}}>
+                  <PouchCan isReady={timerReady} timerColor={timerColor} pct={timerPct}/>
                 </div>
-                <div style="background:rgba(255,255,255,0.05);border-radius:3px;height:4px;margin-top:6px;overflow:hidden;max-width:160px;">
-                  <div style="height:100%;border-radius:3px;width:${Math.min(pct,1)*100}%;background:${statusCol};box-shadow:0 0 6px ${statusCol};transition:width 0.4s;"></div>
-                </div>
-                <div style="font-family:'VT323',monospace;font-size:12px;color:#555;margin-top:3px">${p.todayCount}/${p.todayGoal} today · ${p.weekTotal} this week</div>
               </div>
-              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-                <div style="font-family:'VT323',monospace;font-size:12px;color:${statusCol};text-shadow:${glow(statusCol,4)};letter-spacing:1px">${statusTxt}</div>
-                <div style="font-family:'VT323',monospace;font-size:11px;color:#444">${isExpanded?'▲ CLOSE':'▼ TRASH TALK'}</div>
+              <VT color="#444" size={13} style={{letterSpacing:2}}>INTERVAL: {settings.interval_minutes||60} MIN</VT>
+            </Card>
+
+            <div style={{display:'flex',gap:10,marginBottom:12}}>
+              <Card color={statusColor} style={{flex:1,textAlign:'center',marginBottom:0}}>
+                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:46,fontWeight:900,color:statusColor,textShadow:glow(statusColor,20),lineHeight:1}}>{todayCount}</div>
+                <VT color="#555" size={14} style={{marginTop:4}}>OF {settings.daily_goal||10} GOAL</VT>
+                <div style={{background:'rgba(255,255,255,0.05)',borderRadius:4,height:5,marginTop:10,overflow:'hidden'}}>
+                  <div style={{height:'100%',borderRadius:4,width:`${pctGoal*100}%`,background:statusColor,transition:'width 0.4s'}}/>
+                </div>
+              </Card>
+              <Card color={pctSpend>=1?N.pink:N.yellow} style={{flex:1,textAlign:'center',marginBottom:0}}>
+                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:28,fontWeight:900,lineHeight:1,
+                  color:pctSpend>=1?N.pink:N.yellow,textShadow:glow(pctSpend>=1?N.pink:N.yellow,15)}}>
+                  {fmtMoney(todaySpend)}
+                </div>
+                <VT color="#555" size={14} style={{marginTop:4}}>{settings.daily_spend_limit>0?`OF ${fmtMoney(settings.daily_spend_limit)}`:'SPENT'}</VT>
+                {settings.daily_spend_limit>0&&(
+                  <div style={{background:'rgba(255,255,255,0.05)',borderRadius:4,height:5,marginTop:10,overflow:'hidden'}}>
+                    <div style={{height:'100%',borderRadius:4,width:`${pctSpend*100}%`,background:pctSpend>=1?N.pink:N.yellow,transition:'width 0.4s'}}/>
+                  </div>
+                )}
+              </Card>
+            </div>
+
+            {todayLogs.some(l=>l.mg)&&(
+              <Card color={N.purple} style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <VT color="#888" size={15}>TOTAL NICOTINE</VT>
+                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:20,fontWeight:700,color:N.purple,textShadow:glow(N.purple,10)}}>
+                  {todayLogs.reduce((a,l)=>a+(l.mg||0),0)} mg
+                </div>
+              </Card>
+            )}
+
+            <button onClick={()=>setShowLog(true)} style={{width:'100%',padding:18,border:`2px solid ${N.pink}`,borderRadius:12,
+              background:pulse?`${N.pink}33`:`${N.pink}11`,color:N.pink,fontFamily:"'Orbitron',sans-serif",
+              fontSize:16,fontWeight:900,cursor:'pointer',letterSpacing:2,textShadow:glow(N.pink,10),
+              boxShadow:`0 0 20px ${N.pink}44`,transform:pulse?'scale(0.97)':'scale(1)',transition:'all 0.15s',marginBottom:10}}>
+              + LOG A USE
+            </button>
+            {todayLogs.length>0&&(
+              <NBtn onClick={undoLast} color="#555" full style={{borderColor:'#333',boxShadow:'none',textShadow:'none',color:'#666'}}>↩ UNDO LAST</NBtn>
+            )}
+          </div>
+        )}
+
+        {tab==='week'&&(
+          <div style={{animation:'slide-up 0.4s ease'}}>
+            <Card color={N.cyan}>
+              <VT color={N.cyan} size={13} style={{textShadow:glow(N.cyan,6),marginBottom:16}}>USES — LAST 7 DAYS</VT>
+              <div style={{display:'flex',gap:6,alignItems:'flex-end',height:120,marginBottom:8}}>
+                {days.map(d=>{
+                  const cnt=logs.filter(l=>l.logged_at.startsWith(d)).length;
+                  const h=cnt===0?4:Math.round((cnt/max7)*110);
+                  const over=cnt>(settings.daily_goal||10);
+                  const col=cnt===0?'#1a1a2e':over?N.pink:d===today?N.green:N.cyan;
+                  return(<div key={d} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                    <div style={{fontSize:10,color:col,fontFamily:"'VT323',monospace"}}>{cnt||''}</div>
+                    <div style={{width:'100%',height:h,borderRadius:'4px 4px 0 0',background:col,boxShadow:`0 0 8px ${col}88`}}/>
+                  </div>);
+                })}
+              </div>
+              <div style={{display:'flex',gap:6,marginBottom:20}}>
+                {days.map(d=>(<div key={d} style={{flex:1,textAlign:'center',fontSize:10,fontFamily:"'VT323',monospace",color:d===today?'#e8e8f0':'#444'}}>{fmtDay(d)}</div>))}
+              </div>
+              {(()=>{
+                const maxS=Math.max(...days.map(d=>logs.filter(l=>l.logged_at.startsWith(d)).reduce((a,l)=>a+(l.cost||0),0)),settings.daily_spend_limit||0,0.01);
+                return(<>
+                  <VT color={N.yellow} size={13} style={{textShadow:glow(N.yellow,6),marginBottom:12}}>SPEND — LAST 7 DAYS</VT>
+                  <div style={{display:'flex',gap:6,alignItems:'flex-end',height:70,marginBottom:8}}>
+                    {days.map(d=>{
+                      const sp=logs.filter(l=>l.logged_at.startsWith(d)).reduce((a,l)=>a+(l.cost||0),0);
+                      const h=sp===0?4:Math.round((sp/maxS)*60);
+                      const over=settings.daily_spend_limit>0&&sp>settings.daily_spend_limit;
+                      const col=sp===0?'#1a1a2e':over?N.pink:d===today?N.yellow:N.orange;
+                      return(<div key={d} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                        <div style={{fontSize:9,color:col,fontFamily:"'VT323',monospace"}}>{sp>0?`$${sp.toFixed(1)}`:''}</div>
+                        <div style={{width:'100%',height:h,borderRadius:'4px 4px 0 0',background:col,boxShadow:`0 0 6px ${col}88`}}/>
+                      </div>);
+                    })}
+                  </div>
+                </>);
+              })()}
+              <div style={{borderTop:`1px solid ${N.cyan}33`,paddingTop:16,marginTop:8,display:'flex',justifyContent:'space-between',textAlign:'center'}}>
+                {[['USES',days.reduce((a,d)=>a+logs.filter(l=>l.logged_at.startsWith(d)).length,0),N.cyan],
+                  ['AVG',(days.reduce((a,d)=>a+logs.filter(l=>l.logged_at.startsWith(d)).length,0)/7).toFixed(1),N.purple],
+                  ['MG',days.reduce((a,d)=>a+logs.filter(l=>l.logged_at.startsWith(d)).reduce((b,l)=>b+(l.mg||0),0),0),N.green],
+                  ['$',fmtMoney(days.reduce((a,d)=>a+logs.filter(l=>l.logged_at.startsWith(d)).reduce((b,l)=>b+(l.cost||0),0),0)),N.yellow],
+                ].map(([l,v,c])=>(<div key={l}>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:18,fontWeight:700,color:c,textShadow:glow(c,8)}}>{v}</div>
+                  <VT color="#555" size={12}>{l}</VT>
+                </div>))}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {tab==='log'&&(
+          <div style={{animation:'slide-up 0.4s ease'}}>
+            <VT color={N.cyan} size={13} style={{textShadow:glow(N.cyan,6),marginBottom:12}}>TODAY'S ENTRIES</VT>
+            {todayLogs.length===0
+              ?<Card color="#333" style={{textAlign:'center',padding:32}}><VT color="#444" size={18} style={{letterSpacing:3}}>NO ENTRIES YET</VT></Card>
+              :todayLogs.map((e,i)=>(
+                <Card key={e.id||i} color={N.purple} style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                  <div>
+                    <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,color:N.purple,textShadow:glow(N.purple,6)}}>{e.brand_name||e.type}</div>
+                    <div style={{fontFamily:"'VT323',monospace",fontSize:14,color:'#666',marginTop:4,display:'flex',gap:12}}>
+                      {e.mg?<span style={{color:N.cyan}}>{e.mg}mg</span>:null}
+                      {e.cost?<span style={{color:N.yellow}}>{fmtMoney(e.cost)}</span>:null}
+                      {e.note?<span style={{fontStyle:'italic',color:'#555'}}>"{e.note}"</span>:null}
+                    </div>
+                  </div>
+                  <VT color="#444" size={14}>{fmtTime(e.logged_at)}</VT>
+                </Card>
+              ))
+            }
+          </div>
+        )}
+
+        {tab==='brands'&&(
+          <div style={{animation:'slide-up 0.4s ease'}}>
+            <VT color={N.yellow} size={13} style={{textShadow:glow(N.yellow,6),marginBottom:12}}>YOUR GEAR</VT>
+            {brands.map(b=>(
+              <Card key={b.id} color={N.yellow} style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:700,color:N.yellow,textShadow:glow(N.yellow,6)}}>{b.name}</div>
+                  <VT color="#666" size={14} style={{marginTop:3}}>{b.type} · {b.mg}mg · {fmtMoney(b.price_per_unit)}/unit</VT>
+                </div>
+                <button onClick={()=>deleteBrand(b.id)} style={{background:'transparent',border:'none',color:N.pink,fontSize:20,cursor:'pointer',textShadow:glow(N.pink,6)}}>×</button>
+              </Card>
+            ))}
+            <Card color={N.green} style={{marginTop:8}}>
+              <VT color={N.green} size={13} style={{textShadow:glow(N.green,6),marginBottom:12}}>ADD GEAR</VT>
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                <NInput placeholder="Brand name (e.g. ZYN 6mg)" value={newBrand.name} onChange={e=>setNewBrand(p=>({...p,name:e.target.value}))} color={N.green}/>
+                <div style={{display:'flex',gap:8}}>
+                  <NInput placeholder="mg" type="number" value={newBrand.mg} onChange={e=>setNewBrand(p=>({...p,mg:e.target.value}))} color={N.green} style={{width:'50%'}}/>
+                  <NInput placeholder="$/unit" type="number" value={newBrand.pricePerUnit} onChange={e=>setNewBrand(p=>({...p,pricePerUnit:e.target.value}))} color={N.green} style={{width:'50%'}}/>
+                </div>
+                <select value={newBrand.type} onChange={e=>setNewBrand(p=>({...p,type:e.target.value}))}
+                  style={{width:'100%',background:'rgba(0,0,0,0.7)',border:`1px solid ${N.green}88`,borderRadius:8,
+                    color:'#e8e8f0',fontSize:16,padding:'10px 12px',fontFamily:"'VT323',monospace",outline:'none'}}>
+                  {TYPES.map(t=><option key={t} value={t}>{t}</option>)}
+                </select>
+                <NBtn onClick={addBrand} color={N.green} full>SAVE GEAR</NBtn>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {tab==='crew'&&(
+          <div style={{animation:'slide-up 0.4s ease'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+              <VT color={N.pink} size={13} style={{textShadow:glow(N.pink,6)}}>THE CREW</VT>
+              <NBtn onClick={()=>{fetchLeaderboard();fetchTrashTalks();}} color={N.cyan} small>↻ REFRESH</NBtn>
+            </div>
+            <Card color={N.purple} style={{marginBottom:16}}>
+              <VT color={N.purple} size={14} style={{textShadow:glow(N.purple,6),marginBottom:8}}>HOW TO ADD FRIENDS</VT>
+              <VT color="#666" size={14} style={{lineHeight:1.6}}>
+                1. SHARE YOUR APP URL WITH YOUR CREW<br/>
+                2. EVERYONE SIGNS UP WITH A UNIQUE HANDLE<br/>
+                3. YOU'LL ALL APPEAR HERE AUTOMATICALLY<br/>
+                4. RANKED BY WHO'S CLOSEST TO THEIR GOAL
+              </VT>
+              <div style={{marginTop:10,fontFamily:"'Orbitron',sans-serif",fontSize:11,color:N.yellow,textShadow:glow(N.yellow,4)}}>YOUR HANDLE: {profile?.username}</div>
+            </Card>
+            {leaderboard.length===0
+              ?<Card color="#333" style={{textAlign:'center',padding:32}}>
+                <VT color="#444" size={16} style={{letterSpacing:3,lineHeight:1.8}}>NO CREW YET<br/><span style={{fontSize:12,color:'#333'}}>SHARE THE APP TO SEE FRIENDS</span></VT>
+              </Card>
+              :leaderboard.map((p,i)=>{
+                const pct=p.todayCount/(p.todayGoal||10);
+                const isMe=p.username===profile?.username;
+                const rankColor=i===0?N.yellow:i===1?'#c0c0c0':i===2?'#cd7f32':N.cyan;
+                const statusTxt=pct===0?'CLEAN':pct<=0.5?'CRUSHING IT':pct<=1?'ON TRACK':'OVER LIMIT';
+                const statusCol=pct===0?N.green:pct<=0.5?N.green:pct<=1?N.yellow:N.pink;
+                const talk=trashTalks[p.username];
+                const isExpanded=expandedUser===p.username;
+                return(
+                  <Card key={p.username} color={isMe?N.pink:rankColor} animate={isMe}>
+                    <div style={{display:'flex',alignItems:'center',gap:12,cursor:'pointer'}}
+                      onClick={()=>setExpandedUser(isExpanded?null:p.username)}>
+                      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:20,color:rankColor,
+                        textShadow:glow(rankColor,10),minWidth:32,textAlign:'center',
+                        animation:i===0?'trophy-bounce 2s ease-in-out infinite':'none'}}>
+                        {i<3?MEDAL[i]:`#${i+1}`}
+                      </div>
+                      <div style={{flex:1}}>
+                        <div style={{display:'flex',alignItems:'center',gap:8}}>
+                          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,
+                            color:isMe?N.pink:'#e8e8f0',textShadow:isMe?glow(N.pink,8):'none'}}>{p.username}</div>
+                          {isMe&&<div style={{fontFamily:"'VT323',monospace",fontSize:11,color:N.pink,
+                            border:`1px solid ${N.pink}66`,borderRadius:4,padding:'1px 5px'}}>YOU</div>}
+                        </div>
+                        <div style={{background:'rgba(255,255,255,0.05)',borderRadius:3,height:4,marginTop:6,overflow:'hidden',maxWidth:160}}>
+                          <div style={{height:'100%',borderRadius:3,width:`${Math.min(pct,1)*100}%`,background:statusCol,transition:'width 0.4s'}}/>
+                        </div>
+                        <VT color="#555" size={12} style={{marginTop:3}}>{p.todayCount}/{p.todayGoal} today · {p.weekTotal} this week</VT>
+                      </div>
+                      <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
+                        <VT color={statusCol} size={12} style={{textShadow:glow(statusCol,4),letterSpacing:1}}>{statusTxt}</VT>
+                        <VT color="#444" size={11}>{isExpanded?'▲ CLOSE':'▼ TRASH TALK'}</VT>
+                      </div>
+                    </div>
+                    {isExpanded&&!isMe&&(
+                      <div style={{marginTop:14,borderTop:`1px solid ${rankColor}33`,paddingTop:14,animation:'slide-up 0.3s ease'}}>
+                        {talk&&talk.from!==profile?.username&&(
+                          <div style={{background:'rgba(255,45,120,0.08)',border:`1px solid ${N.pink}44`,borderRadius:8,padding:'10px 12px',marginBottom:12}}>
+                            <VT color={N.pink} size={11} style={{marginBottom:6}}>📢 INCOMING FROM {talk.from}</VT>
+                            <VT color="#e8e8f0" size={15} style={{lineHeight:1.5}}>{talk.text}</VT>
+                          </div>
+                        )}
+                        <VT color={N.orange} size={11} style={{marginBottom:8}}>🔥 SEND TRASH TALK TO {p.username}</VT>
+                        <NInput placeholder="Give context... or just hit FIRE"
+                          value={trashInputs[p.username]||''}
+                          onChange={e=>setTrashInputs(prev=>({...prev,[p.username]:e.target.value}))}
+                          color={N.orange} style={{marginBottom:10}}/>
+                        {talk&&talk.from===profile?.username&&(
+                          <div style={{background:'rgba(255,107,26,0.08)',border:`1px solid ${N.orange}44`,borderRadius:8,padding:'10px 12px',marginBottom:10}}>
+                            <VT color={N.orange} size={11} style={{marginBottom:6}}>⚡ YOUR ROAST</VT>
+                            {talk.loading
+                              ?<VT color={N.orange} size={15} style={{animation:'neon-pulse 0.8s infinite'}}>GENERATING ROAST.EXE...</VT>
+                              :<VT color="#e8e8f0" size={15} style={{lineHeight:1.5}}>{talk.text}</VT>}
+                          </div>
+                        )}
+                        <div style={{display:'flex',gap:8}}>
+                          <NBtn onClick={()=>generateTrashTalk(p.username)} color={N.orange} full disabled={talk?.loading} style={{fontSize:12,padding:'9px 16px'}}>
+                            {talk?.loading?'GENERATING...':'🔥 FIRE THE ROAST'}
+                          </NBtn>
+                          {talk&&!talk.loading&&(
+                            <NBtn onClick={()=>generateTrashTalk(p.username)} color={N.pink} style={{fontSize:11,padding:'9px 14px'}}>↻</NBtn>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {isExpanded&&isMe&&(
+                      <div style={{marginTop:14,borderTop:`1px solid ${N.pink}33`,paddingTop:14}}>
+                        {talk&&talk.from!==profile?.username
+                          ?<div style={{background:'rgba(255,45,120,0.1)',border:`1px solid ${N.pink}44`,borderRadius:8,padding:'12px 14px'}}>
+                            <VT color={N.pink} size={11} style={{marginBottom:8}}>📢 {talk.from} SENT YOU A ROAST:</VT>
+                            <VT color="#e8e8f0" size={16} style={{lineHeight:1.5}}>{talk.text}</VT>
+                          </div>
+                          :<VT color="#333" size={14} style={{textAlign:'center',letterSpacing:2}}>NO ROASTS YET... YOU'RE SAFE</VT>
+                        }
+                      </div>
+                    )}
+                  </Card>
+                );
+              })
+            }
+          </div>
+        )}
+      </div>
+
+      {/* LOG MODAL */}
+      {showLog&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',display:'flex',alignItems:'flex-end',justifyContent:'center',zIndex:100}}
+          onClick={e=>{if(e.target===e.currentTarget)setShowLog(false);}}>
+          <div style={{background:'#08080f',border:`1px solid ${N.pink}66`,borderRadius:'20px 20px 0 0',
+            boxShadow:`0 -10px 40px ${N.pink}22`,padding:'24px 20px 40px',width:'100%',maxWidth:440,animation:'slide-up 0.3s ease'}}>
+            <VT color={N.pink} size={13} style={{textShadow:glow(N.pink,6),marginBottom:16}}>LOG A USE</VT>
+            <div style={{marginBottom:10}}>
+              <VT color="#666" size={13} style={{marginBottom:6}}>BRAND</VT>
+              <select value={logForm.brandId} onChange={e=>setLogForm(p=>({...p,brandId:e.target.value}))}
+                style={{width:'100%',background:'rgba(0,0,0,0.8)',border:`1px solid ${N.pink}66`,borderRadius:8,
+                  color:'#e8e8f0',fontSize:16,padding:'10px 12px',fontFamily:"'VT323',monospace",outline:'none'}}>
+                <option value="">— Custom / No Brand —</option>
+                {brands.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+            {!logForm.brandId&&(
+              <div style={{marginBottom:10}}>
+                <VT color="#666" size={13} style={{marginBottom:6}}>TYPE</VT>
+                <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                  {TYPES.map(t=>(
+                    <button key={t} onClick={()=>setLogForm(p=>({...p,type:t}))}
+                      style={{background:logForm.type===t?`${N.pink}22`:'transparent',
+                        border:`1px solid ${logForm.type===t?N.pink:'#222'}`,borderRadius:20,
+                        padding:'5px 12px',cursor:'pointer',color:logForm.type===t?N.pink:'#555',
+                        fontFamily:"'VT323',monospace",fontSize:14}}>{t}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{display:'flex',gap:8,marginBottom:10}}>
+              <div style={{flex:1}}>
+                <VT color="#666" size={13} style={{marginBottom:6}}>MG</VT>
+                <NInput type="number" color={N.cyan}
+                  placeholder={logForm.brandId?String(brands.find(b=>b.id===logForm.brandId)?.mg||''):'e.g. 6'}
+                  value={logForm.mg} onChange={e=>setLogForm(p=>({...p,mg:e.target.value}))}/>
+              </div>
+              <div style={{flex:1}}>
+                <VT color="#666" size={13} style={{marginBottom:6}}>COST $</VT>
+                <NInput type="number" color={N.yellow}
+                  placeholder={logForm.brandId?String(brands.find(b=>b.id===logForm.brandId)?.price_per_unit||''):'0.30'}
+                  value={logForm.cost} onChange={e=>setLogForm(p=>({...p,cost:e.target.value}))}/>
               </div>
             </div>
-            ${expandedPanel}
-          `, '', isMe);
-        }).join('')}
-  </div>`;
-}
-
-function renderLogForm(){
-  const f = STATE.logForm;
-  const brand = STATE.brands.find(b=>b.id===f.brandId);
-  return `<div class="modal-overlay" id="modal-log-overlay">
-    <div class="modal-sheet" style="border:1px solid ${N.pink}66;box-shadow:0 -10px 40px ${N.pink}22;">
-      ${vt('LOG A USE',N.pink,13,`text-shadow:${glow(N.pink,6)};margin-bottom:16px;`)}
-      <div style="margin-bottom:10px;">
-        ${vt('BRAND','#666',13,'margin-bottom:6px;')}
-        <select id="lf-brand" style="width:100%;background:rgba(0,0,0,0.8);border:1px solid ${N.pink}66;border-radius:8px;color:#e8e8f0;font-size:16px;padding:10px 12px;font-family:'VT323',monospace;outline:none;" onchange="updateLogFormBrand(this.value)">
-          <option value="">— Custom / No Brand —</option>
-          ${STATE.brands.map(b=>`<option value="${b.id}" ${f.brandId===b.id?'selected':''}>${escHtml(b.name)}</option>`).join('')}
-        </select>
-      </div>
-      ${!f.brandId ? `
-        <div style="margin-bottom:10px;">
-          ${vt('TYPE','#666',13,'margin-bottom:6px;')}
-          <div style="display:flex;flex-wrap:wrap;gap:6px;">
-            ${TYPES.map(t=>`<button data-log-type="${t}" style="background:${f.type===t?N.pink+'22':'transparent'};border:1px solid ${f.type===t?N.pink:'#222'};border-radius:20px;padding:5px 12px;cursor:pointer;color:${f.type===t?N.pink:'#555'};font-family:'VT323',monospace;font-size:14px;">${t}</button>`).join('')}
+            <NInput placeholder="Note (optional)" value={logForm.note} onChange={e=>setLogForm(p=>({...p,note:e.target.value}))} color={N.purple} style={{marginBottom:16}}/>
+            <div style={{display:'flex',gap:10}}>
+              <button onClick={()=>setShowLog(false)} style={{flex:1,padding:13,border:'1px solid #333',borderRadius:8,background:'transparent',color:'#666',cursor:'pointer',fontFamily:"'Orbitron',sans-serif",fontSize:13}}>CANCEL</button>
+              <button onClick={logUse} style={{flex:2,padding:13,border:`2px solid ${N.pink}`,borderRadius:8,background:`${N.pink}22`,color:N.pink,fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:900,cursor:'pointer',textShadow:glow(N.pink,8),boxShadow:`0 0 15px ${N.pink}44`}}>LOG IT ▶</button>
+            </div>
           </div>
-        </div>` : ''}
-      <div style="display:flex;gap:8px;margin-bottom:10px;">
-        <div style="flex:1">${vt('MG','#666',13,'margin-bottom:6px;')}${neonInput('lf-mg',f.mg,brand?String(brand.mg||''):'e.g. 6','number',N.cyan)}</div>
-        <div style="flex:1">${vt('COST $','#666',13,'margin-bottom:6px;')}${neonInput('lf-cost',f.cost,brand?String(brand.price_per_unit||''):'0.30','number',N.yellow)}</div>
-      </div>
-      ${neonInput('lf-note',f.note,'Note (optional)','text',N.purple,'margin-bottom:16px;')}
-      <div style="display:flex;gap:10px;">
-        <button id="btn-close-log" style="flex:1;padding:13px;border:1px solid #333;border-radius:8px;background:transparent;color:#666;font-family:'Orbitron',sans-serif;font-size:13px;cursor:pointer;">CANCEL</button>
-        <button id="btn-log-submit" style="flex:2;padding:13px;border:2px solid ${N.pink};border-radius:8px;background:${N.pink}22;color:${N.pink};font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;cursor:pointer;text-shadow:${glow(N.pink,8)};box-shadow:0 0 15px ${N.pink}44;">LOG IT ▶</button>
-      </div>
-    </div>
-  </div>`;
-}
-
-function renderSettingsForm(){
-  const e = STATE.editSettings||STATE.settings;
-  return `<div class="modal-overlay" id="modal-settings-overlay">
-    <div class="modal-sheet" style="border:1px solid ${N.purple}66;box-shadow:0 -10px 40px ${N.purple}22;">
-      ${vt('SETTINGS',N.purple,13,`text-shadow:${glow(N.purple,6)};margin-bottom:16px;`)}
-      ${[['DAILY USE GOAL','daily_goal','e.g. 10'],['DAILY SPEND LIMIT ($)','daily_spend_limit','e.g. 5.00'],['INTERVAL BETWEEN USES (MIN)','interval_minutes','e.g. 60']]
-        .map(([lbl,key,ph])=>`
-          <div style="margin-bottom:12px;">
-            ${vt(lbl,'#666',13,'margin-bottom:6px;')}
-            <input class="neon-input" id="es-${key}" type="number" value="${e[key]||''}" placeholder="${ph}" style="border:1px solid ${N.purple}88;box-shadow:0 0 6px ${N.purple}44;caret-color:${N.purple};"/>
-          </div>`).join('')}
-      <div style="display:flex;gap:10px;margin-top:8px;margin-bottom:12px;">
-        <button id="btn-close-settings" style="flex:1;padding:13px;border:1px solid #333;border-radius:8px;background:transparent;color:#666;font-family:'Orbitron',sans-serif;font-size:13px;cursor:pointer;">CANCEL</button>
-        ${`<button id="btn-save-settings" style="flex:2;background:${N.purple}22;border:2px solid ${N.purple};border-radius:8px;color:${N.purple};font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;padding:11px 20px;cursor:pointer;text-shadow:${glow(N.purple,8)};letter-spacing:1px;">SAVE</button>`}
-      </div>
-      <div style="border-top:1px solid #1a1a2e;padding-top:14px;">
-        ${`<button id="btn-sign-out" style="width:100%;background:${N.pink}22;border:2px solid ${N.pink};border-radius:8px;color:${N.pink};font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;padding:11px 20px;cursor:pointer;text-shadow:${glow(N.pink,8)};letter-spacing:1px;">⏻ SIGN OUT</button>`}
-      </div>
-    </div>
-  </div>`;
-}
-
-/* ── collect form values before actions ── */
-function collectAndLog(){
-  const mg   = document.getElementById('lf-mg')?.value;
-  const cost = document.getElementById('lf-cost')?.value;
-  const note = document.getElementById('lf-note')?.value;
-  STATE.logForm = {...STATE.logForm, mg, cost, note};
-  logUse();
-}
-function saveBrand(){
-  STATE.newBrand = {
-    name: document.getElementById('nb-name')?.value||'',
-    mg:   document.getElementById('nb-mg')?.value||'',
-    pricePerUnit: document.getElementById('nb-price')?.value||'',
-    type: document.getElementById('nb-type')?.value||TYPES[0],
-  };
-  addBrand();
-}
-function collectAndSaveSettings(){
-  STATE.editSettings = {
-    daily_goal:       document.getElementById('es-daily_goal')?.value,
-    daily_spend_limit:document.getElementById('es-daily_spend_limit')?.value,
-    interval_minutes: document.getElementById('es-interval_minutes')?.value,
-  };
-  saveSettings();
-}
-function updateLogFormBrand(val){
-  setState({logForm:{...STATE.logForm, brandId:val}});
-}
-
-/* ── main render ── */
-let _authRendered = false;
-
-function render(){
-  const app = document.getElementById('app');
-  if(!app) return;
-
-  if(STATE.loading){
-    app.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;"><div class="spinner"></div></div>`;
-    _authRendered = false;
-    return;
-  }
-
-  if(!STATE.session){
-    app.style.padding = '0';
-    // Re-render fully when switching modes (signin<->signup) to show/hide username field
-    const modeChanged = _authRendered && app.dataset.authMode !== STATE.authMode;
-    if(!_authRendered || modeChanged){
-      app.dataset.authMode = STATE.authMode;
-      app.innerHTML = renderAuth();
-      _authRendered = true;
-      document.getElementById('auth-email')?.addEventListener('input', e=>{ STATE.authEmail=e.target.value; });
-      document.getElementById('auth-password')?.addEventListener('input', e=>{ STATE.authPassword=e.target.value; });
-      document.getElementById('auth-username')?.addEventListener('input', e=>{ STATE.authUsername=e.target.value; });
-    } else {
-      const errEl = document.getElementById('auth-error');
-      const btnEl = document.getElementById('auth-submit');
-      if(errEl) errEl.innerHTML = STATE.authError
-        ? `<div style="font-family:'VT323',monospace;font-size:15px;color:${STATE.authError.includes('Check')?N.green:N.pink};margin-bottom:12px;text-align:center;">${STATE.authError}</div>` : '';
-      if(btnEl){
-        if(STATE.authLoading){
-          btnEl.innerHTML = `<div style="display:flex;justify-content:center;padding:12px;"><div class="spinner"></div></div>`;
-        } else {
-          btnEl.innerHTML = `<button id="btn-auth-submit" style="width:100%;background:${N.pink}22;border:2px solid ${N.pink};border-radius:8px;color:${N.pink};font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;padding:11px 20px;cursor:pointer;text-shadow:${glow(N.pink,8)};box-shadow:0 0 8px ${N.pink}44;letter-spacing:1px;">${STATE.authMode==='signup'?'CREATE ACCOUNT →':'ENTER THE GRID →'}</button>`;
-          setTimeout(()=>{
-            const b = document.getElementById('btn-auth-submit');
-            if(b) b.onclick = STATE.authMode==='signup' ? signUp : signIn;
-          }, 0);
-        }
-      }
-    }
-    return;
-  }
-
-  _authRendered = false;
-
-  app.style.padding = '16px 16px 90px';
-
-  const TABS = [{id:'today',label:'TODAY'},{id:'week',label:'WEEK'},{id:'log',label:'LOG'},{id:'brands',label:'GEAR'},{id:'crew',label:'CREW'}];
-
-  let tabContent = '';
-  if(STATE.tab==='today')  tabContent = renderToday();
-  if(STATE.tab==='week')   tabContent = renderWeek();
-  if(STATE.tab==='log')    tabContent = renderLog();
-  if(STATE.tab==='brands') tabContent = renderGear();
-  if(STATE.tab==='crew')   tabContent = renderCrew();
-
-  app.innerHTML = `
-    <div style="width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <div>
-        <div style="font-size:28px;font-weight:900;color:${N.pink};line-height:1;">
-          HIT<span style="color:${N.cyan}">LIST</span>
         </div>
-        <div style="font-family:'VT323',monospace;font-size:14px;color:${N.yellow};text-shadow:${glow(N.yellow,6)};letter-spacing:3px;margin-top:2px;">${escHtml(STATE.profile?.username||'')} ▮</div>
-      </div>
-      <button id="btn-open-settings" style="background:transparent;border:1px solid ${N.purple}66;border-radius:8px;color:${N.purple};padding:8px 10px;cursor:pointer;font-size:16px;text-shadow:${glow(N.purple,6)};box-shadow:0 0 8px ${N.purple}44;">⚙</button>
+      )}
+
+      {/* SETTINGS MODAL */}
+      {showSettings&&editSettings&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',display:'flex',alignItems:'flex-end',justifyContent:'center',zIndex:100}}
+          onClick={e=>{if(e.target===e.currentTarget)setShowSettings(false);}}>
+          <div style={{background:'#08080f',border:`1px solid ${N.purple}66`,borderRadius:'20px 20px 0 0',
+            boxShadow:`0 -10px 40px ${N.purple}22`,padding:'24px 20px 40px',width:'100%',maxWidth:440,animation:'slide-up 0.3s ease'}}>
+            <VT color={N.purple} size={13} style={{textShadow:glow(N.purple,6),marginBottom:16}}>SETTINGS</VT>
+            {[['DAILY USE GOAL','daily_goal','e.g. 10'],['DAILY SPEND LIMIT ($)','daily_spend_limit','e.g. 5.00'],['INTERVAL BETWEEN USES (MIN)','interval_minutes','e.g. 60']].map(([lbl,key,ph])=>(
+              <div key={key} style={{marginBottom:12}}>
+                <VT color="#666" size={13} style={{marginBottom:6}}>{lbl}</VT>
+                <NInput type="number" placeholder={ph} color={N.purple} value={editSettings[key]||''} onChange={e=>setEditSettings(p=>({...p,[key]:e.target.value}))}/>
+              </div>
+            ))}
+            <div style={{display:'flex',gap:10,marginTop:8,marginBottom:12}}>
+              <button onClick={()=>setShowSettings(false)} style={{flex:1,padding:13,border:'1px solid #333',borderRadius:8,background:'transparent',color:'#666',cursor:'pointer',fontFamily:"'Orbitron',sans-serif",fontSize:13}}>CANCEL</button>
+              <NBtn onClick={saveSettings} color={N.purple} style={{flex:2}}>SAVE</NBtn>
+            </div>
+            <div style={{borderTop:'1px solid #1a1a2e',paddingTop:14}}>
+              <NBtn onClick={signOut} color={N.pink} full>⏻ SIGN OUT</NBtn>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-
-    <div style="display:flex;gap:4px;background:rgba(0,0,0,0.6);border:1px solid ${N.cyan}33;border-radius:10px;padding:4px;margin-bottom:20px;width:100%;max-width:420px;">
-      ${TABS.map(t=>`<button class="tab-btn ${STATE.tab===t.id?'active':''}" data-tab="${t.id}">${t.label}</button>`).join('')}
-    </div>
-
-    <div style="width:100%;max-width:420px;">
-      ${tabContent}
-    </div>
-
-    ${STATE.showLogForm  ? renderLogForm()     : ''}
-    ${STATE.showSettings ? renderSettingsForm(): ''}
-  `;
-  // Modal overlay dismiss on background tap
-  const logOverlay = document.getElementById('modal-log-overlay');
-  if(logOverlay) logOverlay.onclick = e=>{ if(e.target===logOverlay) setState({showLogForm:false}); };
-  const settingsOverlay = document.getElementById('modal-settings-overlay');
-  if(settingsOverlay) settingsOverlay.onclick = e=>{ if(e.target===settingsOverlay) setState({showSettings:false}); };
-
-  // Bind all events after DOM update
-  setTimeout(bindEvents, 0);
+  );
 }
 
-/* ── bind interactive elements after every render ── */
-function bindEvents(){
-  // Log form submit
-  const logSubmit = document.getElementById('btn-log-submit');
-  if(logSubmit) logSubmit.onclick = collectAndLog;
+function App(){
+  const [session,setSession]=useState(undefined);
+  const [profile,setProfile]=useState(null);
 
-  // Save brand
-  const saveBrandBtn = document.getElementById('btn-save-brand');
-  if(saveBrandBtn) saveBrandBtn.onclick = saveBrand;
-
-  // Save settings
-  const saveSettingsBtn = document.getElementById('btn-save-settings');
-  if(saveSettingsBtn) saveSettingsBtn.onclick = collectAndSaveSettings;
-
-  // Sign out
-  const signOutBtn = document.getElementById('btn-sign-out');
-  if(signOutBtn) signOutBtn.onclick = signOut;
-
-  // Sign in / sign up
-  const authSubmit = document.getElementById('btn-auth-submit');
-  if(authSubmit) authSubmit.onclick = STATE.authMode==='signup' ? signUp : signIn;
-
-  // Undo last
-  const undoBtn = document.getElementById('btn-undo');
-  if(undoBtn) undoBtn.onclick = undoLast;
-
-  // Open log form
-  const openLog = document.getElementById('btn-open-log');
-  if(openLog) openLog.onclick = ()=>setState({showLogForm:true});
-
-  // Close log form
-  const closeLog = document.getElementById('btn-close-log');
-  if(closeLog) closeLog.onclick = ()=>setState({showLogForm:false});
-
-  // Open settings
-  const openSettings = document.getElementById('btn-open-settings');
-  if(openSettings) openSettings.onclick = ()=>setState({showSettings:true,editSettings:{...STATE.settings}});
-
-  // Close settings
-  const closeSettings = document.getElementById('btn-close-settings');
-  if(closeSettings) closeSettings.onclick = ()=>setState({showSettings:false});
-
-  // Brand delete buttons
-  document.querySelectorAll('[data-delete-brand]').forEach(btn=>{
-    btn.onclick = ()=>deleteBrand(btn.dataset.deleteBrand);
-  });
-
-  // Tab buttons
-  document.querySelectorAll('[data-tab]').forEach(btn=>{
-    btn.onclick = ()=>setState({tab:btn.dataset.tab});
-  });
-
-  // Auth mode toggle
-  document.querySelectorAll('[data-auth-mode]').forEach(btn=>{
-    btn.onclick = ()=>{ _authRendered=false; setState({authMode:btn.dataset.authMode,authError:''}); };
-  });
-
-  // Log form brand select
-  const brandSelect = document.getElementById('lf-brand');
-  if(brandSelect) brandSelect.onchange = e=>setState({logForm:{...STATE.logForm,brandId:e.target.value}});
-
-  // Log form type buttons
-  document.querySelectorAll('[data-log-type]').forEach(btn=>{
-    btn.onclick = ()=>setState({logForm:{...STATE.logForm,type:btn.dataset.logType}});
-  });
-
-  // Crew refresh
-  const crewRefresh = document.getElementById('btn-crew-refresh');
-  if(crewRefresh) crewRefresh.onclick = ()=>{ loadLeaderboard(); loadTrashTalks(); };
-
-  // Leaderboard expand
-  document.querySelectorAll('[data-expand-user]').forEach(btn=>{
-    btn.onclick = ()=>setState({expandedUser:STATE.expandedUser===btn.dataset.expandUser?null:btn.dataset.expandUser});
-  });
-
-  // Trash talk fire buttons
-  document.querySelectorAll('[data-trash-target-id]').forEach(btn=>{
-    btn.onclick = ()=>generateTrashTalk(btn.dataset.trashTargetId, btn.dataset.trashTargetName);
-  });
-
-  // Trash talk inputs
-  document.querySelectorAll('[data-trash-input]').forEach(inp=>{
-    inp.oninput = e=>{ STATE.trashInputs[inp.dataset.trashInput]=e.target.value; };
-  });
-}
-
-/* ── timer tick — direct DOM updates only, no re-render ── */
-let _lastTimerReady = null;
-setInterval(()=>{
-  if(!STATE.session) return;
-  STATE.now = Date.now();
-
-  const s = STATE.settings;
-  const intervalMs = (s.interval_minutes||60)*60*1000;
-  const elapsedMs = STATE.timerStart ? STATE.now - STATE.timerStart : intervalMs;
-  const remainingMs = Math.max(intervalMs - elapsedMs, 0);
-  const timerPct = STATE.timerStart ? Math.min(elapsedMs/intervalMs,1) : 1;
-  const isReady = timerPct >= 1;
-  const timerMins = Math.floor(remainingMs/60000);
-  const timerSecs = Math.floor((remainingMs%60000)/1000);
-  const timerColor = isReady ? N.green : timerPct>0.6 ? N.yellow : N.pink;
-
-  // Direct DOM update — countdown text
-  const countdownEl = document.getElementById('timer-countdown');
-  if(countdownEl){
-    countdownEl.textContent = timerMins+':'+String(timerSecs).padStart(2,'0');
-    countdownEl.style.color = timerColor;
-    countdownEl.style.textShadow = glow(timerColor,8);
-  }
-  // Direct DOM update — ring
-  const ringEl = document.getElementById('timer-ring');
-  if(ringEl){
-    const r = (210-10)/2, circ = 2*Math.PI*r;
-    ringEl.setAttribute('stroke-dashoffset', circ*(1-Math.max(timerPct,0)));
-    ringEl.setAttribute('stroke', timerColor);
-  }
-  // Only do a full re-render when ready state flips (lid opens/closes)
-  if(_lastTimerReady !== null && isReady !== _lastTimerReady){
-    scheduleRender();
-  }
-  _lastTimerReady = isReady;
-}, 1000);
-
-/* ── iOS Safari: fire initial render immediately so screen isn't black ── */
-document.addEventListener('DOMContentLoaded', function(){
-  render();
-  // Fallback: if onAuthStateChange never fires within 5s, stop loading
-  setTimeout(()=>{
-    if(STATE.loading){
-      setState({loading:false});
-    }
-  }, 5000);
-});
-
-/* ── global error handler — shows error instead of black screen ── */
-window.addEventListener('error', function(e){
-  const app = document.getElementById('app');
-  if(app && app.innerHTML.trim() === '') {
-    app.innerHTML = '<div style="padding:40px;text-align:center;font-family:monospace;color:#ff2d78;font-size:14px;">Error: ' + (e.message||'Unknown') + '<br/><br/><button onclick="location.reload()" style="background:transparent;border:1px solid #ff2d78;color:#ff2d78;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;">RETRY</button></div>';
-  }
-});
-window.addEventListener('unhandledrejection', function(e){
-  console.error('Unhandled promise rejection:', e.reason);
-});
-
-/* ── auth init — use getSession() first, more reliable on iOS Safari ── */
-async function initAuth(){
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    await handleSession(session);
-  } catch(err){
-    console.error('initAuth error:', err);
-    setState({loading:false});
-  }
-}
-
-async function handleSession(session){
-  try {
-    STATE.session = session;
-    if(session){
-      let {data:profile} = await sb.from('profiles').select('*').eq('id',session.user.id).single();
-      if(!profile){
-        const pendingUsername = localStorage.getItem('hl_pending_username');
-        if(pendingUsername){
-          const {data:newProfile} = await sb.from('profiles')
-            .insert({id:session.user.id, username:pendingUsername})
-            .select().single();
-          profile = newProfile;
-          localStorage.removeItem('hl_pending_username');
-        }
+  const loadProfile=async(session)=>{
+    let {data:p}=await sb.from('profiles').select('*').eq('id',session.user.id).single();
+    if(!p){
+      const pending=localStorage.getItem('hl_pending_username');
+      if(pending){
+        const {data:np}=await sb.from('profiles').insert({id:session.user.id,username:pending}).select().single();
+        p=np;
+        localStorage.removeItem('hl_pending_username');
       }
-      STATE.profile = profile;
-      await loadUserData();
-    } else {
-      setState({loading:false});
     }
-  } catch(err){
-    console.error('handleSession error:', err);
-    setState({loading:false});
-  }
+    setProfile(p);
+  };
+
+  useEffect(()=>{
+    sb.auth.getSession().then(async({data:{session}})=>{
+      setSession(session||null);
+      if(session)await loadProfile(session);
+    });
+    const {data:{subscription}}=sb.auth.onAuthStateChange(async(event,session)=>{
+      if(event==='INITIAL_SESSION')return;
+      setSession(session||null);
+      if(session)await loadProfile(session);
+      else setProfile(null);
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  if(session===undefined)return(
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh'}}>
+      <div className="spinner"/>
+    </div>
+  );
+  if(!session)return <AuthScreen/>;
+  return <MainApp session={session} profile={profile}/>;
 }
 
-/* ── auth listener — handles sign in/out/token refresh ── */
-sb.auth.onAuthStateChange(async(event, session)=>{
-  // Skip INITIAL_SESSION — handled by initAuth() already
-  if(event === 'INITIAL_SESSION') return;
-  await handleSession(session);
-});
-
-// Kick off auth check immediately
-initAuth();
+const root=ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
 </script>
 </body>
 </html>
